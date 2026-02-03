@@ -43,7 +43,6 @@ def compute_h_windows(idf):
             h += u * w.Length * w.Height
     return h
 
-
 def compute_slab_loss(x,y, f_slab=0.4):
     perimeter = 2*(x + y)
     return perimeter * f_slab
@@ -59,8 +58,6 @@ def compute_h_wall(idf):
         h += u * a
 
     return h
-
-
 
 #ventilation et infiltration
 AIR_DENSITY = 1.2
