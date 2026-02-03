@@ -11,7 +11,7 @@ d = pd.read_csv("data/US_SF_data_energyplus.csv", sep=";")
 
 # Drop the 2 design days (10-min timestep)
 rows_per_day = int(24 * 60 / 10)  # 144
-df = d.iloc[2 * rows_per_day :].copy()
+df = d.iloc[2 * rows_per_day :]
 
 df["Tzone_next"] = df["Tzone"].shift(-1)
 df = df.dropna()
