@@ -16,7 +16,7 @@ dfs = []
 
 for model, path in FILES.items():
     if not path.exists():
-        raise FileNotFoundError(f"❌ Fichier introuvable : {path}")
+        raise FileNotFoundError(f" Fichier introuvable : {path}")
     df = pd.read_excel(path)
     df["model"] = model
     dfs.append(df)
@@ -26,4 +26,4 @@ final_df = pd.concat(dfs, ignore_index=True)
 output = Path( run_dir /"metrics_all_models.xlsx")
 final_df.to_excel(output, index=False)
 
-print(f"✅ Fichier créé : {output}")
+print(f" Fichier créé : {output}")

@@ -153,7 +153,7 @@ def save_pysr_model(filepath, model):
 
 
 
-def create_run_folder(model_name, base_dir="results"):
+def create_run_folder(model_name, base_dir="results/"):
     run_name = f"{model_name}"
     run_path = os.path.join(base_dir, run_name)
 
