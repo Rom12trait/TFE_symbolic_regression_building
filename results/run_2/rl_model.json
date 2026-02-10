@@ -1,0 +1,9 @@
+{
+    "model": "LinearRegression",
+    "intercept": 0.0622507960746681,
+    "coefficients": {
+        "Tzone": 0.9969875385564183,
+        "Tout": 0.0005379796342642625,
+        "Qhvac": 1.4074951909159774e-06
+    }
+}
