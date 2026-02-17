@@ -1,7 +1,0 @@
-complexity                                                       9
-loss                                                      0.000906
-equation         (x0 * 0.9965622) + ((x1 * 0.0003433762) + 0.07...
-score                                                     0.000606
-sympy_format           x0*0.9965622 + x1*0.0003433762 + 0.07469014
-lambda_format    PySRFunction(X=>x0*0.9965622 + x1*0.0003433762...
-Name: 3, dtype: object

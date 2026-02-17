@@ -1,0 +1,12 @@
+{
+    "model_type": "LinearRegressionModel",
+    "random_state": 42,
+    "is_fitted": true,
+    "training_date": "2026-02-16 14:50:17",
+    "coefficients": [
+        0.9943661768789569,
+        0.000761854668379236,
+        1.3999052626452457e-06
+    ],
+    "intercept": 0.11967916284774205
+}
