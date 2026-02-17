@@ -7,18 +7,40 @@ from datetime import datetime
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import time
 
-def load_data (data_path):
-    d = pd.read_csv(data_path, sep=";")
-    # Drop the 2 design days (10-min timestep)
-    rows_per_day = int(24 * 60 / 10)  # 144
-    df = d.iloc[2 * rows_per_day:].copy()
 
-    #décalage temporel
-    df["Tzone_next"] = df["Tzone"].shift(-1)
+
+def load_data(filepath):
+    timestep= 15 #minutes
+    rows_per_day = int(24 * 60 / timestep)  # 96
+    design_days =2*rows_per_day+1
+    dict_newindex = {
+        'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
+        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+    }
+    df = pd.read_csv(filepath, sep=";", skiprows=range (1, design_days))
+
+    df.rename(columns=dict_newindex, inplace=True)
+
+    # décalage temporel
+    df['Tzone_next'] = df['Tzone'].shift(-1)
+    df['Qhvac'] = df['Heating_living_unit'] - df['Cooling_living_unit']
     # Suppression de la dernière ligne (NaN)
     df = df.dropna()
 
+
+    # Séparer la première colonne en plusieurs colonnes selon un délimiteur
+    #df_propre = d.iloc[:, 0].str.split(',', expand=True)
+
+    # décalage temporel
+    # df["Tzone_next"] = df["Tzone"].shift(-1)
+    # Suppression de la dernière ligne (NaN)
+    #df = df.dropna()
+
     return df
+
+
 
 def compute_metrics(y_true, y_pred, train_time = None, test_time = None):
     dt_sec = 600
@@ -120,22 +142,7 @@ def save_predictions(
 
     df.to_excel(filepath, index=False)
 
-def save_rc_model(filepath, R, C, dt, a, b, c):
-    data = {
-        "model": "RC",
-        "R_K_per_W": R,
-        "C_J_per_K": C,
-        "dt_s": dt,
-        "a": a,
-        "b": b,
-        "c": c
-    }
 
-    filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=4)
 
 def save_linear_model(filepath, coef, intercept, feature_names):
     data = {
