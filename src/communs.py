@@ -42,8 +42,8 @@ def load_data(filepath):
 
 
 
-def compute_metrics(y_true, y_pred, train_time = None, test_time = None):
-    dt_sec = 600
+def compute_metrics(y_true, y_pred, train_time = None, test_time = None, dt_sec = 900):
+
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
 
@@ -141,22 +141,6 @@ def save_predictions(
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
     df.to_excel(filepath, index=False)
-
-
-
-def save_linear_model(filepath, coef, intercept, feature_names):
-    data = {
-        "model": "LinearRegression",
-        "intercept": float(intercept),
-        "coefficients": dict(zip(feature_names, coef))
-    }
-
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=4)
-
-def save_pysr_model(filepath, model):
-    with open(filepath, "w") as f:
-        f.write(str(model.get_best())) # ou peut etre f.write(model.latex())
 
 
 

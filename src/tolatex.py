@@ -5,7 +5,7 @@ from pathlib import Path
 # Si votre fichier est dans un dossier, mettez le chemin complet
 
 project_root = Path(__file__).resolve().parents[1]
-run_dir = project_root/"results"/"run_1"
+run_dir = project_root/"results"/"run_2"
 
 file_path = run_dir / "metrics_all_models.xlsx"
 df = pd.read_excel(file_path)
@@ -27,7 +27,7 @@ latex_code = df_final.to_latex(index=False, caption="Mon tableau", label="tab:mo
 
 
 # 3. Sauvegarder dans un fichier .tex
-with open("tableau.tex", "w", encoding="utf-8") as f:
+with open("tableau2.tex", "w", encoding="utf-8") as f:
     f.write(latex_code)
 
 print("Conversion réussie ! Fichier 'tableau.tex' généré.")

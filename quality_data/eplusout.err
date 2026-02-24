@@ -1,0 +1,15 @@
+Program Version,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.02.24 12:22,
+   ************* Beginning Zone Sizing Calculations
+   ** Severe  ** BuildingSurface:Detailed="FLOOR_UNIT1", invalid Outside Boundary Condition Object="SURFPROPOTHSDCOEFSLABAVERAGE".
+   **   ~~~   **  no OtherSideCoefficients of that name.
+   ** Severe  ** BuildingSurface:Detailed="FLOOR_GARAGE1", invalid Outside Boundary Condition Object="SURFPROPOTHSDCOEFSLABAVERAGE".
+   **   ~~~   **  no OtherSideCoefficients of that name.
+   **  Fatal  ** GetSurfaceData: Errors discovered, program terminates.
+   ...Summary of Errors that led to program termination:
+   ..... Reference severe error count=2
+   ..... Last severe error=BuildingSurface:Detailed="FLOOR_GARAGE1", invalid Outside Boundary Condition Object="SURFPROPOTHSDCOEFSLABAVERAGE".
+   ************* Warning:  Node connection errors not checked - most system input has not been read (see previous warning).
+   ************* Fatal error -- final processing.  Program exited before simulations began.  See previous error messages.
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 2 Severe Errors.
+   ************* EnergyPlus Terminated--Fatal Error Detected. 0 Warning; 2 Severe Errors; Elapsed Time=00hr 00min  0.18sec

@@ -63,9 +63,9 @@ def compute_h_windows(idf):
     h = 0.0
     for w in idf.idfobjects["window"]:
             u = 1.590008
-            length = w.Length
-            height = w.Height
-            multiplier = w.Multiplier
+            length = float(w.Length)
+            height = float(w.Height)
+            multiplier = float(w.Multiplier)
             h += u * length * height* multiplier
 
     print(f"window h= {h:.4f}")
@@ -133,7 +133,10 @@ def compute_slab_perimeter(idf, heated_zones=None):
 def compute_slab_loss(idf, f_slab=0.4):
     heated_zones = get_heated_zones(idf)
     perimeter = compute_slab_perimeter(idf, heated_zones)
-    return perimeter * f_slab
+    print("perimeter: ", perimeter)
+    x= perimeter * f_slab
+    print(f"slabloss = {x:.4f}")
+    return x
 
 def compute_h_wall(idf):
     h = 0.0
@@ -196,6 +199,28 @@ class RCmodel:
         self.dt = dt
         self.random_state = random_state
 
+        # Paramètres physiques
+        self.Ca = 6.8e5
+        self.Cm = 2.42e7
+        self.R1 = 0.0010
+        self.R2 = 0.0086
+
+        # Matrices continues
+        self.A = np.array([
+            [-1 / (self.Ca * self.R1), 1 / (self.Ca * self.R1)],
+            [1 / (self.Cm * self.R1), -(1 / (self.Cm * self.R1) + 1 / (self.Cm * self.R2))]
+        ])
+
+        self.B = np.array([
+            [0, 1 / self.Ca],
+            [1 / (self.Cm * self.R2), 0]
+        ])
+
+        self.I = np.eye(2)
+
+        # Pré-calcul matrice inverse (constante)
+        self.M = np.linalg.inv(self.I - self.dt * self.A)
+
 # coefficients
     @property
     def a(self):
@@ -228,8 +253,11 @@ class RCmodel:
 
         n = len(Tout)
         T_pred = np.zeros(n)
-        T_pred[0] = Tzone[0]
-
+        T_pred[0] = (
+                self.a * Tzone[0]
+                + self.b * Tout[0]
+                + self.c * Qhvac[0]
+        )
         for k in range(n-1):
 
             T_pred[k+1] = (
@@ -259,6 +287,87 @@ class RCmodel:
                 )
 
         return T_pred
+
+    def simulate_2r2c(self, Tout, Qhvac, Ta_init=20.0, Tm_init=20.0):
+        # Capacité thermique air (J/K)
+        Ca = 6.8e5
+
+        # Capacité thermique masse (J/K)
+        Cm = 2.42e7
+
+        # Résistance air ↔ masse (K/W)
+        R1 = 0.0010
+
+        # Résistance masse ↔ extérieur (K/W)
+        R2 = 0.0087
+        """
+        Simulation du modèle 2R2C
+
+        Parameters
+        ----------
+        Tout : array
+            Température extérieure [°C]
+        Qhvac : array
+            Puissance HVAC [W]
+        Ta_init : float
+            Température air initiale
+        Tm_init : float
+            Température masse initiale
+
+        Returns
+        -------
+        Ta_pred : array
+            Température air prédite
+        Tm_pred : array
+            Température masse prédite
+        """
+
+        n = len(Tout)
+
+        Ta_pred = np.zeros(n)
+        Tm_pred = np.zeros(n)
+
+        Ta_pred[0] = Ta_init
+        Tm_pred[0] = Tm_init
+
+        for k in range(n - 1):
+            # -------- AIR --------
+            dTa = (
+                    (Tm_pred[k] - Ta_pred[k]) / R1
+                    + Qhvac[k]
+            )
+
+            Ta_pred[k + 1] = Ta_pred[k] + (self.dt / Ca) * dTa
+
+            # -------- MASSE --------
+            dTm = (
+                    (Ta_pred[k] - Tm_pred[k]) / R1
+                    + (Tout[k] - Tm_pred[k]) / R2
+            )
+
+            Tm_pred[k + 1] = Tm_pred[k] + (self.dt / Cm) * dTm
+
+        return Ta_pred, Tm_pred
+
+    def simulate_euler_implicite(self, Tout, Qhvac, Ta_init=20.0, Tm_init=20.0):
+
+        n = len(Tout)
+        X = np.zeros((2, n))
+
+        X[:, 0] = [Ta_init, Tm_init]
+
+        for k in range(n - 1):
+            U_next = np.array([Tout[k + 1], Qhvac[k + 1]])
+
+            X[:, k + 1] = self.M @ (
+                    X[:, k] + self.dt * (self.B @ U_next)
+            )
+
+        Ta = X[0, :]
+        Tm = X[1, :]
+
+        return Ta, Tm
+
 
     def benchmark(self, Tzone, timestep_minutes=15, day_step=4):
 

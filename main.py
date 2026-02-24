@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import importlib
 from src import communs, pysr_model
@@ -5,8 +6,6 @@ importlib.reload(communs)
 importlib.reload(pysr_model)
 from src.function_rc import RCmodel, compute_r, slab_capacity, load_idf
 from sklearn.model_selection import train_test_split
-from pathlib import Path
-import time
 from src.linear_model import LinearRegressionModel
 from src.pysr_model import PySRModel
 
@@ -28,17 +27,28 @@ idf = load_idf(
 X = df[["Tzone", "Tout", "Qhvac"]].values
 y = df["Tzone_next"].values
 
+y_hour =[]
+k=0
+for i in range(1, len(X[:,0]), 4):
+
+    y_hour.append(X[i,0])
+y_hour=np.array(y_hour)
+
+
 X_test = df_test[["Tzone", "Tout", "Qhvac"]].values
 y_test = df_test["Tzone_next"].values
 
 X_train, x_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=randomstate)
 
+test1 = X[:,0]
+test2 = X[:,1]
+Test3 = X[:,2]
 
 #%% RC
 
 model = RCmodel(
-    R=compute_r(idf), #0.0009
-    C=slab_capacity(), #26.82e6,
+    R= 0.008636689, #compute_r(idf), 0.0009
+    C= 27.14e6, #slab_capacity(), 26.82e6,
     dt=900, #15 min
     random_state= randomstate
 )
@@ -46,7 +56,7 @@ model = RCmodel(
 
 T_pred, train_time_rc = communs.time_function(model.predict_free, X[:,0], X[:,1], X[:,2])
 
-metrics_rc = communs.compute_metrics(y_test, T_pred, train_time_rc)
+metrics_rc = communs.compute_metrics(y, T_pred, train_time_rc)
 
 
 timestamp = pd.Timestamp.now().strftime("%Y-%m-%d_%H-%M")
@@ -59,7 +69,7 @@ communs.save_run_to_excel(
 communs.save_predictions(
     filepath=f"results/{runfile}/RC_predictions.xlsx",
     datetime_index=df.index,
-    t_true=X[:,0],
+    t_true=y,
     t_pred=T_pred
 )
 model.save_parameters(f"results/{runfile}")
@@ -68,8 +78,10 @@ model.save_parameters(f"results/{runfile}")
 
 t_pred_day = model.simulate_by_day(X[:,0], X[:,1], X[:,2])
 
-metrics_rc_day = communs.compute_metrics(y_test, t_pred_day)
+metrics_rc_day = communs.compute_metrics(y, t_pred_day)
 
+t_air2r2c_pred, tm_pred  = model.simulate_euler_implicite(X[:,1], X[:,2], X[0,0])
+metrics_rc_2r2c = communs.compute_metrics(y, t_air2r2c_pred)
 
 #%% benchmark 24h
 
@@ -122,7 +134,7 @@ communs.save_predictions(
 
 
 
-model_pysr = PySRModel(random_state=randomstate)
+model_pysr = PySRModel(random_state=randomstate, niterations= 40)
 
 train_time_pysr = model_pysr.fit_class(X_train, y_train)
 
@@ -143,7 +155,7 @@ communs.save_predictions(
     t_pred=y_pred_pysr
 )
 
-model_pysr.save_parameters("results/run_1/",
+model_pysr.save_parameters(f"results/{runfile}/",
                           filename=f"{model_pysr.__class__.__name__}.json")
 
 

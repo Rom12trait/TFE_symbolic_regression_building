@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parents[1]
-run_dir = project_root/"results"/"run_1"
+run_dir = project_root/"results"/"run_2"
 FILES = {
     "Benchmark": run_dir / "metrics_benchmark_rc.xlsx",
     "PySR": run_dir / "metrics_pysr.xlsx",

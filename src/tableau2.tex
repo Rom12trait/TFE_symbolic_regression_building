@@ -1,0 +1,23 @@
+\begin{table}
+\caption{Mon tableau}
+\label{tab:mon_tableau}
+\begin{tabular}{lllll}
+\toprule
+Modeles & Benchmark & PySR & RL & RC \\
+\midrule
+MSE (°C²) & 0.001856 & 0.001823 & 0.001818 & 166.118838 \\
+RMSE (°C) & 0.043079 & 0.042694 & 0.042636 & 12.888710 \\
+MAE (°C) & 0.017956 & 0.018385 & 0.018439 & 11.815135 \\
+Max Error (°C) & 0.320375 & 0.437727 & 0.436842 & 27.044393 \\
+MBE / Bias (°C) & -0.000341 & 0.000395 & 0.000493 & -11.810585 \\
+R² (-) & 0.996395 & 0.996081 & 0.996091 & -356.205540 \\
+CV(RMSE) (%) & 0.189119 & 0.188034 & 0.187780 & 56.765071 \\
+Error Variance (°C²) & 0.001856 & 0.001823 & 0.001818 & 26.628926 \\
+Error Std Dev (°C) & 0.043078 & 0.042692 & 0.042633 & 5.160322 \\
+RMSE dT/dt (°C/s) & 0.000035 & 0.000034 & 0.000034 & 0.000125 \\
+comment & benchmark, step 15min, 1jour/4 & PySR pour l'année airport & rl en utilisant train_test_split & RC basé IDF \\
+Train Time (s) & NaN & 98.794005 & 0.014995 & 0.055224 \\
+Test Time (s) & NaN & 0.009630 & 0.000812 & NaN \\
+\bottomrule
+\end{tabular}
+\end{table}
