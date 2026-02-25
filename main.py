@@ -10,14 +10,14 @@ from src.linear_model import LinearRegressionModel
 from src.pysr_model import PySRModel
 
 
-runfile="run_1"
+runfile="run_latest"
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
 
 #Charger les données
 df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
 df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-
+#df_quality = communs.load_data("dataset/generate_quality_data/model_dynamique.csv")
 idf = load_idf(
     "dataset/modèle habitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
@@ -64,7 +64,7 @@ communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_rc.xlsx",
     model_name="RC_model",
     metrics=metrics_rc,
-    comment="RC basé IDF"
+    comment="RC pas de temps"
 )
 communs.save_predictions(
     filepath=f"results/{runfile}/RC_predictions.xlsx",
@@ -98,6 +98,26 @@ communs.save_run_to_excel(
     comment="benchmark, step 15min, 1jour/4"
 )
 
+
+# 24h
+model24h = RCmodel(
+    R= 0.008636689, #compute_r(idf), 0.0009
+    C= 27.14e6, #slab_capacity(), 26.82e6,
+    dt=24*4*900, #15 min
+    random_state= randomstate
+)
+
+T_pred_24, train_time_rc_24 = communs.time_function(model24h.predict_free, X[::96,0], X[::96,1], X[::96,2])
+
+metrics_rc_24 = communs.compute_metrics(y[::96], T_pred_24, train_time_rc_24)
+
+communs.save_run_to_excel(
+    filepath=f"results/{runfile}/metrics_rc.xlsx",
+    model_name="RC_model",
+    metrics=metrics_rc_24,
+    comment="RC pas de temps 24h"
+)
+
 #%% Regression linéaire
 
 
@@ -110,14 +130,14 @@ y_pred, test_time_rl = model_rl.predict(X_test)
 metrics_rl = communs.compute_metrics(y_test, y_pred, train_time_rl, test_time_rl)
 
 
-model_rl.save_parameters("results/run_1/",
+model_rl.save_parameters(f"results/{runfile}/",
                           filename=f"{model_rl.__class__.__name__}.json")
 
 communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_rl.xlsx",
     model_name="regression lineaire",
     metrics=metrics_rl,
-    comment="rl en utilisant train_test_split"
+    comment="rl en utilisant train_test_split, 15min"
 )
 communs.save_predictions(
     filepath=f"results/{runfile}/rl_predictions_.xlsx",
@@ -146,7 +166,7 @@ communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_pysr.xlsx",
     model_name="PySR_model",
     metrics=metrics_pysr,
-    comment="PySR pour l'année airport"
+    comment="PySR pour l'année airport, 15 min"
 )
 communs.save_predictions(
     filepath=f"results/{runfile}/pysr_predictions.xlsx",
