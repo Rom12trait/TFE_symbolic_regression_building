@@ -1,4 +1,4 @@
-Program Version:,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.02.24 12:27
+Program Version:,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.02.24 12:49
 Tabular Output Report in Format: ,Comma
 
 Building:,US+SF+CZ4C+hp+slab+IECC_2024
@@ -207,7 +207,7 @@ FOR:,Entire Facility
 General
 
 ,,Value
-,Program Version and Build,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.02.24 12:27
+,Program Version and Build,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.02.24 12:49
 ,RunPeriod,ANNUAL
 ,Weather File,Brussels.Natl.AP BRU BEL SRC-TMYx WMO#=064510
 ,Latitude [deg],50.90
@@ -2020,9 +2020,9 @@ HVAC
 Input Fields
 
 ,,Count
-,IDF Objects,498
+,IDF Objects,501
 ,Defaulted Fields,429
-,Fields with Defaults,2067
+,Fields with Defaults,2073
 ,Autosized Fields,22
 ,Autosizable Fields,39
 ,Autocalculated Fields,29

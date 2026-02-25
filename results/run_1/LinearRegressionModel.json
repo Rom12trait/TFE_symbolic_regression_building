@@ -2,7 +2,7 @@
     "model_type": "LinearRegressionModel",
     "random_state": 42,
     "is_fitted": true,
-    "training_date": "2026-02-16 14:50:17",
+    "training_date": "2026-02-24 13:10:25",
     "coefficients": [
         0.9943661768789569,
         0.000761854668379236,

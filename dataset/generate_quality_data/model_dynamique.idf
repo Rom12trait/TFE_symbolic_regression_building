@@ -5887,14 +5887,29 @@ OutputControl:Table:Style,
     InchPound;                !- Unit Conversion
 
 Output:Variable,
-    *,                        !- Key Value
-    Water Heater Tank Temperature,    !- Variable Name
-    Timestep;                 !- Reporting Frequency
+    *,                       !- Key Value
+    Site Outdoor Air Drybulb Temperature,  !- Variable Name
+    Timestep;                !- Reporting Frequency
 
 Output:Variable,
-    *,                        !- Key Value
-    Zone Air Temperature,     !- Variable Name
-    Timestep;                 !- Reporting Frequency
+    *,                       !- Key Value
+    Zone Air Temperature,    !- Variable Name
+    Timestep;                !- Reporting Frequency
+
+Output:Variable,
+    *,                       !- Key Value
+    Zone Total Internal Total Heating Rate,  !- Variable Name
+    Timestep;                !- Reporting Frequency
+
+Output:Variable,
+    *,                       !- Key Value
+    Zone Air System Sensible Heating Rate,  !- Variable Name
+    Timestep;                !- Reporting Frequency
+
+Output:Variable,
+    *,                       !- Key Value
+    Zone Air System Sensible Cooling Rate,  !- Variable Name
+    Timestep;                !- Reporting Frequency
 
 Output:Meter,
     Electricity:Facility,     !- Key Name
