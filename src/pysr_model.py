@@ -105,5 +105,10 @@ class PySRModel(BaseModel):
             "complexity": int(best["complexity"]),
             "loss": float(best["loss"]),
         }
-        fulldict = { **self.best_params, **self.fixed_params, **bestdict}
+        pysr_params = self.model.get_params()
+        pysr_params_clean = {
+            k: (str(v) if not isinstance(v, (int, float, str, list, dict, bool, type(None))) else v)
+            for k, v in pysr_params.items()
+        }
+        fulldict = { **pysr_params_clean, **self.fixed_params, **bestdict}
         return fulldict
