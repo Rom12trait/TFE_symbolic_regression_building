@@ -20,6 +20,8 @@ def load_data(filepath):
         'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
     }
     df = pd.read_csv(filepath, sep=";", skiprows=range (1, design_days))
+    #print(df.columns)
+    df.columns = df.columns.str.strip()
 
     df.rename(columns=dict_newindex, inplace=True)
 
