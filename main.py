@@ -10,19 +10,19 @@ from src.linear_model import LinearRegressionModel
 from src.pysr_model import PySRModel
 
 
-runfile="run_latest"
+runfile="run_annee_dyn"
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
 
 #Charger les données
-df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
+#soit airport + brussel bel ensemble ou annee dyn
+#df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
 df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-#df_quality = communs.load_data("dataset/generate_quality_data/model_dynamique.csv")
+df = communs.load_data("dataset/modèle habitation/model_annee_dynamique.csv")
 idf = load_idf(
     "dataset/modèle habitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
 )
-
 
 X = df[["Tzone", "Tout", "Qhvac"]].values
 y = df["Tzone_next"].values
@@ -35,10 +35,11 @@ for i in range(1, len(X[:,0]), 4):
 y_hour=np.array(y_hour)
 
 
-X_test = df_test[["Tzone", "Tout", "Qhvac"]].values
-y_test = df_test["Tzone_next"].values
+#X_test = df_test[["Tzone", "Tout", "Qhvac"]].values
+#y_test = df_test["Tzone_next"].values
 
-X_train, x_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=randomstate)
+#normalement x_val et y_val
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=randomstate)
 
 test1 = X[:,0]
 test2 = X[:,1]
@@ -177,8 +178,9 @@ communs.save_predictions(
 
 model_pysr.save_parameters(f"results/{runfile}/",
                           filename=f"{model_pysr.__class__.__name__}.json")
-
-
+#%%
+communs.agregate(runfile)
+communs.tolatex(runfile)
 
 
 
