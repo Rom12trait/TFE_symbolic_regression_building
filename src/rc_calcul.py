@@ -11,8 +11,9 @@ y= 9.09981820971244
 
 
 H_trans = compute_h_wall(idf) + compute_h_windows(idf) + compute_slab_loss(idf)
-H_vent = compute_h_vent(volume=350, ach=0.4)
-
+print(f"H_trans = {H_trans:.4f}")
+H_vent = compute_h_vent(volume=560, ach=0)
+print(f"H_vent = {H_vent:.4f}")
 R = 1 / (H_trans + H_vent)
 
 C = slab_capacity()
