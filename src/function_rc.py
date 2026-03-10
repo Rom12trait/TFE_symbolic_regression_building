@@ -3,7 +3,7 @@ import numpy as np
 import math
 from pathlib import Path
 import json
-
+import time
 
 def load_idf(idf_path, idd_path):
     IDF.setiddname(idd_path)
@@ -168,10 +168,10 @@ def compute_h_vent(volume, ach):
 
 def compute_r(idf):
 
-    H_trans = compute_h_wall(idf) + compute_h_windows(idf) + compute_slab_loss(idf)
-    H_vent = compute_h_vent(volume=350, ach=0.4)
-    R = 1 / (H_trans + H_vent)
-    return R
+    h_trans = compute_h_wall(idf) + compute_h_windows(idf) + compute_slab_loss(idf)
+    h_vent = compute_h_vent(volume=350, ach=0.4)
+    r = 1 / (h_trans + h_vent)
+    return r
 
 #Calcul de C
 def slab_capacity(thickness=0.12, rho=2300, cp=880):
@@ -193,33 +193,12 @@ def compute_total_capacity(slab_c, wall_c_list):
 #class RC
 
 class RCmodel:
-    def __init__(self,R,C,dt,random_state):
-        self.R = R
-        self.C = C
+    def __init__(self,res,capa,dt,random_state):
+        self.R = res
+        self.C = capa
         self.dt = dt
         self.random_state = random_state
 
-        # Paramètres physiques
-        self.Ca = 6.8e5
-        self.Cm = 2.42e7
-        self.R1 = 0.0010
-        self.R2 = 0.0086
-
-        # Matrices continues
-        self.A = np.array([
-            [-1 / (self.Ca * self.R1), 1 / (self.Ca * self.R1)],
-            [1 / (self.Cm * self.R1), -(1 / (self.Cm * self.R1) + 1 / (self.Cm * self.R2))]
-        ])
-
-        self.B = np.array([
-            [0, 1 / self.Ca],
-            [1 / (self.Cm * self.R2), 0]
-        ])
-
-        self.I = np.eye(2)
-
-        # Pré-calcul matrice inverse (constante)
-        self.M = np.linalg.inv(self.I - self.dt * self.A)
 
 # coefficients
     @property
@@ -233,149 +212,52 @@ class RCmodel:
         return self.dt / self.C
 
 #predictions
-    def predict(self, Tzone, Tout, Qhvac):
+    def predict(self, t_zone, t_out, q_hvac):
 
-        n = len(Tout)
-        T_pred = np.zeros(n)
-        T_pred[0] = Tzone[0]
+        n = len(t_out)
+        t_pred = np.zeros(n)
+        t_pred[0] = t_zone[0]
+        start = time.perf_counter()
 
         for k in range(n-1):
 
-            T_pred[k+1] = (
-                    self.a * Tzone[k]
-                    + self.b * Tout[k]
-                    + self.c * Qhvac[k]
+            t_pred[k+1] = (
+                    self.a * t_zone[k]
+                    + self.b * t_out[k]
+                    + self.c * q_hvac[k]
             )
+        elapsed = time.perf_counter() - start
 
-        return T_pred
+        return t_pred, elapsed
 
-    def predict_free(self,Tzone, Tout, Qhvac):
+    def simulate_by_day(self, t_data, t_out, q_hvac, steps_per_day=96):
 
-        n = len(Tout)
-        T_pred = np.zeros(n)
-        T_pred[0] = (
-                self.a * Tzone[0]
-                + self.b * Tout[0]
-                + self.c * Qhvac[0]
-        )
-        for k in range(n-1):
-
-            T_pred[k+1] = (
-                    self.a * T_pred[k]
-                    + self.b * Tout[k]
-                    + self.c * Qhvac[k]
-            )
-
-        return T_pred
-
-    def simulate_by_day(self, T_data, Tout, Qhvac, steps_per_day=96):
-
-        n = len(T_data)
-        T_pred = np.zeros(n)
+        n = len(t_data)
+        t_pred = np.zeros(n)
+        start_time = time.perf_counter()
 
         for start in range(0, n, steps_per_day):
 
             end = min(start + steps_per_day, n)
 
-            T_pred[start] = T_data[start]
+            t_pred[start] = t_data[start]
 
             for k in range(start, end - 1):
-                T_pred[k + 1] = (
-                        self.a * T_pred[k]
-                        + self.b * Tout[k]
-                        + self.c * Qhvac[k]
+                t_pred[k + 1] = (
+                        self.a * t_pred[k]
+                        + self.b * t_out[k]
+                        + self.c * q_hvac[k]
                 )
+        elapsed = time.perf_counter() - start_time
 
-        return T_pred
+        return t_pred, elapsed
 
-    def simulate_2r2c(self, Tout, Qhvac, Ta_init=20.0, Tm_init=20.0):
-        # Capacité thermique air (J/K)
-        Ca = 6.8e5
-
-        # Capacité thermique masse (J/K)
-        Cm = 2.42e7
-
-        # Résistance air ↔ masse (K/W)
-        R1 = 0.0010
-
-        # Résistance masse ↔ extérieur (K/W)
-        R2 = 0.0087
-        """
-        Simulation du modèle 2R2C
-
-        Parameters
-        ----------
-        Tout : array
-            Température extérieure [°C]
-        Qhvac : array
-            Puissance HVAC [W]
-        Ta_init : float
-            Température air initiale
-        Tm_init : float
-            Température masse initiale
-
-        Returns
-        -------
-        Ta_pred : array
-            Température air prédite
-        Tm_pred : array
-            Température masse prédite
-        """
-
-        n = len(Tout)
-
-        Ta_pred = np.zeros(n)
-        Tm_pred = np.zeros(n)
-
-        Ta_pred[0] = Ta_init
-        Tm_pred[0] = Tm_init
-
-        for k in range(n - 1):
-            # -------- AIR --------
-            dTa = (
-                    (Tm_pred[k] - Ta_pred[k]) / R1
-                    + Qhvac[k]
-            )
-
-            Ta_pred[k + 1] = Ta_pred[k] + (self.dt / Ca) * dTa
-
-            # -------- MASSE --------
-            dTm = (
-                    (Ta_pred[k] - Tm_pred[k]) / R1
-                    + (Tout[k] - Tm_pred[k]) / R2
-            )
-
-            Tm_pred[k + 1] = Tm_pred[k] + (self.dt / Cm) * dTm
-
-        return Ta_pred, Tm_pred
-
-    def simulate_euler_implicite(self, Tout, Qhvac, Ta_init=20.0, Tm_init=20.0):
-
-        n = len(Tout)
-        X = np.zeros((2, n))
-
-        X[:, 0] = [Ta_init, Tm_init]
-
-        for k in range(n - 1):
-            U_next = np.array([Tout[k + 1], Qhvac[k + 1]])
-
-            X[:, k + 1] = self.M @ (
-                    X[:, k] + self.dt * (self.B @ U_next)
-            )
-
-        Ta = X[0, :]
-        Tm = X[1, :]
-
-        return Ta, Tm
-
-
-    def benchmark(self, Tzone, timestep_minutes=15, day_step=4):
+    def benchmark(self, t_zone, timestep_minutes=15, day_step=4):
 
         steps_per_hour = 60 // timestep_minutes
         steps_per_day = 24 * steps_per_hour  # 96 si 15 min
-        shift_steps = steps_per_day  # horizon 24h
 
-        values = Tzone
+        values = t_zone
 
         y_true = []
         y_pred = []
@@ -434,11 +316,11 @@ class RCmodel:
 
         print(f"Paramètres sauvegardés dans : {file_path}")
 
-    def save_modelrc(self,filepath, R, C, dt, a, b, c):
+    def save_modelrc(self,filepath, res, capa, dt, a, b, c):
         data = {
             "model": "RC",
-            "R_K_per_W": R,
-            "C_J_per_K": C,
+            "R_K_per_W": res,
+            "C_J_per_K": capa,
             "dt_s": dt,
             "a": a,
             "b": b,

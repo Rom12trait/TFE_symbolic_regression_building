@@ -1,3 +1,5 @@
+from ctypes import c_int
+
 from pysr import PySRRegressor
 from sympy import false
 
@@ -57,6 +59,23 @@ class PySRModel(BaseModel):
         y_pred_pysr= self.model.predict(X)
         test_time_pysr = time.perf_counter() - start_pysr
         return y_pred_pysr, test_time_pysr
+
+    def predict_24h(self, x, steps_per_day=96):
+        n = len(x)
+        predictions =[]
+        start = time.perf_counter()
+        for i in range(0, n, steps_per_day):
+            t_zone_actuelle = x[i,0]
+            end = min(i + steps_per_day, n)
+            predictions.append(t_zone_actuelle)
+            for t in range(i, end-1):
+                x_input = np.array([[t_zone_actuelle, x[t,1], x[t,2]]])
+                t_suivante = self.model.predict(x_input)
+                valeur_pred = t_suivante[0]
+                predictions.append(valeur_pred)
+                t_zone_actuelle = valeur_pred
+        elapsed = time.perf_counter() - start
+        return predictions, elapsed
 
     def tune_optuna(self, x_train, y_train, x_val, y_val, n_trials = 20, timeout= None):
 
