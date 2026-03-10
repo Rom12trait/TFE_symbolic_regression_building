@@ -191,6 +191,8 @@ def tolatex(runfile):
 
     file_path = run_dir / "metrics_all_models.xlsx"
     df = pd.read_excel(file_path)
+
+    #df = df.round(3)
     df_transposed = df.T
     # 1. Utiliser la première ligne comme en-tête
     df_transposed.columns = df_transposed.iloc[0]
@@ -205,8 +207,8 @@ def tolatex(runfile):
 
     # 2. Convertir en LaTeX
     # index=False pour ne pas inclure la numérotation des lignes
-    latex_code = df_final.to_latex(index=False, caption="Mon tableau", label="tab:mon_tableau")
-
+    latex_code = df_final.to_latex(index=False, caption="Mon tableau", label="tab:mon_tableau", float_format = "%.3f")
+    # ou float_format = "%.3f" dans to_latex
     # 3. Sauvegarder dans un fichier .tex
     with open(run_dir/"tableau.tex", "w", encoding="utf-8") as f:
         f.write(latex_code)
