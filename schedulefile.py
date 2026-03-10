@@ -82,6 +82,6 @@ idf.newidfobject("SCHEDULE:FILE",
 
 output_idf(idf)
 
-idf.saveas("dataset/modèle habitation/model_annee_dynamique.idf")
+idf.saveas("dataset/modèle habitation/model_annee_dynamique_brussel_bel.idf")
 
 
