@@ -1,0 +1,23 @@
+\begin{table}
+\caption{Mon tableau}
+\label{tab:mon_tableau}
+\begin{tabular}{llllllll}
+\toprule
+Modeles & Benchmark & PySR & PySR & RL & RL & RC & RC \\
+\midrule
+MSE (°C²) & 0.002 & 0.002 & 0.246 & 0.002 & 0.254 & 0.003 & 3.517 \\
+RMSE (°C) & 0.043 & 0.044 & 0.496 & 0.044 & 0.504 & 0.058 & 1.875 \\
+MAE (°C) & 0.018 & 0.020 & 0.293 & 0.020 & 0.300 & 0.041 & 1.342 \\
+Max Error (°C) & 0.320 & 0.310 & 1.633 & 0.310 & 1.669 & 0.358 & 5.682 \\
+MBE / Bias (°C) & -0.000 & -0.000 & -0.095 & -0.000 & -0.093 & -0.030 & -1.251 \\
+R² (-) & 0.996 & 0.996 & 0.521 & 0.996 & 0.505 & 0.994 & -5.845 \\
+CV(RMSE) (%) & 0.189 & 0.193 & 2.177 & 0.193 & 2.213 & 0.253 & 8.232 \\
+Error Variance (°C²) & 0.002 & 0.002 & 0.237 & 0.002 & 0.246 & 0.002 & 1.952 \\
+Error Std Dev (°C) & 0.043 & 0.044 & 0.487 & 0.044 & 0.496 & 0.049 & 1.397 \\
+RMSE dT/dt (°C/s) & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+comment & benchmark, step 15min, 1jour/4 & PySR pour l'année airport, 15 min & PySR déroulement 24h & rl pas de temps 15min & rl déroulement 24H & RC pas de temps 15min & RC déroulement 24h \\
+Train Time (s) & NaN & 69.563 & NaN & 0.004 & NaN & 0.044 & 0.055 \\
+Test Time (s) & NaN & 0.009 & 198.910 & 0.000 & 0.046 & NaN & NaN \\
+\bottomrule
+\end{tabular}
+\end{table}

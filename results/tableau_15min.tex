@@ -1,0 +1,25 @@
+\begin{table}
+\caption{Comparaison des modèles (Pas de temps 15 min)}
+\label{tab:tableau_15min}
+\begin{tabular}{lllllllll}
+\toprule
+Modeles & RC_model & PySR_model & regression linéaire & RC_model & RC_model & PySR_model & regression linéaire & RC_model \\
+\midrule
+MSE (°C²) & 0.002 & 0.002 & 0.002 & 0.003 & 0.101 & 0.089 & 0.081 & 0.097 \\
+RMSE (°C) & 0.043 & 0.044 & 0.044 & 0.058 & 0.318 & 0.299 & 0.285 & 0.311 \\
+MAE (°C) & 0.018 & 0.020 & 0.020 & 0.041 & 0.127 & 0.131 & 0.134 & 0.129 \\
+Max Error (°C) & 0.320 & 0.310 & 0.310 & 0.358 & 3.501 & 3.576 & 3.521 & 3.673 \\
+MBE / Bias (°C) & -0.000 & -0.000 & -0.000 & -0.030 & -0.002 & 0.009 & -0.002 & -0.034 \\
+R² (-) & 0.996 & 0.996 & 0.996 & 0.994 & 0.990 & 0.991 & 0.992 & 0.990 \\
+CV(RMSE) (%) & 0.189 & 0.193 & 0.193 & 0.253 & 1.448 & 1.357 & 1.295 & 1.412 \\
+Error Variance (°C²) & 0.002 & 0.002 & 0.002 & 0.002 & 0.101 & 0.089 & 0.081 & 0.095 \\
+Error Std Dev (°C) & 0.043 & 0.044 & 0.044 & 0.049 & 0.318 & 0.299 & 0.285 & 0.309 \\
+RMSE dT/dt (°C/s) & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+comment & benchmark, step 15min, 1jour/4 & PySR pour l'année airport, 15 min & rl pas de temps 15min & RC pas de temps 15min & benchmark, step 15min, 1jour/4 & PySR pour l'année airport, 15 min & rl pas de temps 15min & RC pas de temps 15min \\
+Model & benchmark_rc & pysr & rl & rc & benchmark_rc & pysr & rl & rc \\
+Dataset & Classique & Classique & Classique & Classique & Dynamique & Dynamique & Dynamique & Dynamique \\
+Train Time (s) & NaN & 69.563 & 0.004 & 0.044 & NaN & 54.055 & 0.018 & 0.050 \\
+Test Time (s) & NaN & 0.009 & 0.000 & NaN & NaN & 0.010 & 0.001 & NaN \\
+\bottomrule
+\end{tabular}
+\end{table}
