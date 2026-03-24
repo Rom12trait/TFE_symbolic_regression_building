@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import importlib
 from src import communs, pysr_model, linear_model, function_rc
 importlib.reload(communs)
@@ -7,20 +8,21 @@ importlib.reload(linear_model)
 importlib.reload(function_rc)
 from src.function_rc import RCmodel, load_idf
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from src.linear_model import LinearRegressionModel
 from src.pysr_model import PySRModel
 
 
-runfile="run_complet_annee_dyn"
+runfile="TEST"
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
 
 #Charger les données
 #soit airport + brussel bel ensemble ou annee dyn
-#df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
-#df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-df = communs.load_data("dataset/modèle habitation/model_annee_dynamique.csv")
-df_test = communs.load_data("dataset/modèle habitation/model_annee_dynamique_brussel_bel.csv")
+df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
+df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
+#df = communs.load_data("dataset/modèle habitation/model_annee_dynamique.csv")
+#df_test = communs.load_data("dataset/modèle habitation/model_annee_dynamique_brussel_bel.csv")
 idf = load_idf(
     "dataset/modèle habitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
@@ -28,14 +30,6 @@ idf = load_idf(
 
 X = df[["Tzone", "Tout", "Qhvac"]].values
 y = df["Tzone_next"].values
-
-y_hour =[]
-k=0
-for i in range(1, len(X[:,0]), 4):
-
-    y_hour.append(X[i,0])
-y_hour=np.array(y_hour)
-
 
 #X_test = df_test[["Tzone", "Tout", "Qhvac"]].values
 #y_test = df_test["Tzone_next"].values
@@ -144,30 +138,42 @@ communs.save_predictions(
 )
 
 #%% régression symbolique
-
-
 #pysr_output_dir = Path("results/run_1", "pysr").resolve()
 #pysr_output_dir.mkdir(exist_ok=True)
 
+# --- AVANT LE FIT ---
+# On crée deux scalers séparés (un pour X, un pour y)
+scaler_X = StandardScaler()
+scaler_y = StandardScaler()
 
+# On ajuste le scaler sur les données d'entraînement
+X_train_scaled = scaler_X.fit_transform(X_train)
+y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
 
-model_pysr = PySRModel(random_state=randomstate, niterations= 40)
+# On applique la même transformation à la validation
+x_val_scaled = scaler_X.transform(x_val)
 
-train_time_pysr = model_pysr.fit_class(X_train, y_train)
+model_pysr = PySRModel(niterations= 80)
 
-y_pred_pysr, test_time_pysr = model_pysr.predict_time(x_val)
+train_time_pysr = model_pysr.fit_class(X_train_scaled, y_train_scaled)
 
-metrics_pysr = communs.compute_metrics(y_val, y_pred_pysr, train_time_pysr, test_time_pysr)
+y_pred_pysr, test_time_pysr = model_pysr.predict_time(x_val_scaled)
+y_pred_real = scaler_y.inverse_transform(y_pred_pysr.reshape(-1, 1)).flatten()
+metrics_pysr = communs.compute_metrics(y_val, y_pred_real, train_time_pysr, test_time_pysr)
 
-y_pred_pysr_24h, test_time_pysr_24h = model_pysr.predict_24h(X)
+y_pred_pysr_24h, test_time_pysr_24h = model_pysr.predict_24hnorm(X, scaler_X, scaler_y)
 metrics_pysr_24h = communs.compute_metrics(X[:,0], y_pred_pysr_24h, None, test_time_pysr_24h)
 
+equation_reelle = model_pysr.denormalize_pysr_equation(scaler_X, scaler_y)
+
+print("Équation thermique dénormalisée :")
+print(equation_reelle)
 
 communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_pysr.xlsx",
     model_name="PySR_model",
     metrics=metrics_pysr,
-    comment="PySR pour l'année airport, 15 min"
+    comment="PySR pas de temps norm"
 )
 communs.save_predictions(
     filepath=f"results/{runfile}/pysr_predictions.xlsx",
@@ -183,7 +189,7 @@ communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_pysr.xlsx",
     model_name="PySR_model",
     metrics=metrics_pysr_24h,
-    comment="PySR déroulement 24h"
+    comment="PySR déroulement 24h norm"
 )
 communs.save_predictions(
     filepath=f"results/{runfile}/pysr_predictions_24h.xlsx",
@@ -194,7 +200,6 @@ communs.save_predictions(
 
 #%%
 communs.agregate(runfile)
-#%%
 communs.tolatex(runfile)
 
 

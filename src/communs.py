@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
-import json
 import os
 from pathlib import Path
-from datetime import datetime
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import time
 
@@ -43,11 +41,72 @@ def load_data(filepath):
     return df
 
 
+def load_data_opti(filepath, selected_days):
+    # Paramètres de base
+    rows_per_day = 96
+    design_days = 2 * rows_per_day + 1
+
+    dict_newindex = {
+        'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
+        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+        'Fans:Electricity [J](TimeStep)': 'Pfans'
+    }
+
+    # Chargement en sautant les jours de dimensionnement
+    df = pd.read_csv(filepath, sep=";", skiprows=range(1, design_days))
+    df.columns = df.columns.str.strip()
+    df.rename(columns=dict_newindex, inplace=True)
+
+    # --- TRAITEMENT DU DATETIME (MM/DD HH:MM:SS -> 2025-MM-DD) ---
+    # On ajoute l'année 2025 devant la chaîne
+    df['Date/Time'] = df['Date/Time'].str.strip()
+    # Gestion du 24:00:00 (EnergyPlus style) en le ramenant à 00:00:00
+    df['Date/Time'] = df['Date/Time'].str.replace('24:00:00', '00:00:00')
+
+    df['datetime'] = pd.to_datetime("2025/" + df['Date/Time'], format="%Y/%m/%d %H:%M:%S")
+
+    # Si on a remplacé 24:00 par 00:00, ce point appartient techniquement au jour suivant
+    # On ajuste les index pour que le 00:00:00 soit bien la fin du jour précédent ou le début du nouveau
+    df.set_index('datetime', inplace=True)
+    df = df.sort_index()
+
+    # --- EXTRACTION POUR LES 12 JOURS ---
+    data_12_days = {}
+
+    for day in selected_days:
+        start = pd.Timestamp(day + " 00:00:00")
+        end = pd.Timestamp(day + " 23:45:00")
+
+        try:
+            day_slice = df.loc[start:end].copy()
+
+            if len(day_slice) == 96:
+                data_12_days[day] = {
+                    'Tout': day_slice['Tout'].values,
+                    'Tzone_init': day_slice['Tzone'].iloc[0],
+                    'Pfans': day_slice['Pfans'].values/900 if 'Pfans' in day_slice else np.full(96, 100.0),
+                    # 100W par défaut
+                    'Tzone_real': day_slice['Tzone'].values  # Pour comparer après l'opti
+                }
+            else:
+                print(f"⚠️ Jour {day} incomplet dans EnergyPlus ({len(day_slice)} points)")
+        except KeyError:
+            print(f"❌ Jour {day} absent du fichier EnergyPlus")
+
+    return data_12_days
+
 
 def compute_metrics(y_true, y_pred, train_time = None, test_time = None, dt_sec = 900):
 
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
+
+    if len(y_true) != len(y_pred):
+        min_len = min(len(y_true), len(y_pred))
+        y_true = y_true[:min_len]
+        y_pred = y_pred[:min_len]
 
     errors = y_pred - y_true
 
@@ -64,10 +123,6 @@ def compute_metrics(y_true, y_pred, train_time = None, test_time = None, dt_sec 
     cv_rmse = rmse / np.mean(y_true) * 100 #Seuils usuels : < 10 % → excellent < 15 % → acceptable
 
 
-    dy_true = np.diff(y_true)/dt_sec
-    dy_pred = np.diff(y_pred)/dt_sec
-    rmse_derivative = np.sqrt(mean_squared_error(dy_true, dy_pred))
-
     metrics = {
         "MSE (°C²)": mse,
         "RMSE (°C)": rmse,
@@ -78,7 +133,6 @@ def compute_metrics(y_true, y_pred, train_time = None, test_time = None, dt_sec 
         "CV(RMSE) (%)": cv_rmse,
         "Error Variance (°C²)": var,
         "Error Std Dev (°C)": std,
-        "RMSE dT/dt (°C/s)": rmse_derivative
     }
 
     if train_time is not None:

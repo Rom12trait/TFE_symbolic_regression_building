@@ -1,20 +1,17 @@
-from ctypes import c_int
-
 from pysr import PySRRegressor
 from sympy import false
-
 from src.base_model import BaseModel
 import time
 import numpy as np
 from pathlib import Path
 from sklearn.metrics import mean_squared_error
 import optuna
-from itertools import product
-import uuid
+import sympy
+
 
 class PySRModel(BaseModel):
 
-    def __init__(self, random_state=None, niterations=100, populations=10, populations_size=40, maxsize=13, parsimony= 1e-3):
+    def __init__(self, random_state=None, niterations=100, populations=10, populations_size=40, maxsize=20, parsimony= 1e-3):
         super().__init__(random_state)
         pysr_dir = Path("C:/Users/Corentin/pysr")
         pysr_dir.mkdir(parents=True, exist_ok=True)
@@ -22,10 +19,16 @@ class PySRModel(BaseModel):
         self.fixed_params = {
             "binary_operators": ["+", "*"],
             "unary_operators": [],
-            "model_selection": "best",
+            "model_selection": "accuracy",
             "verbosity": 1,
-            "elementwise_loss" : "loss(x, y) = (x - y)^2",
-
+            "elementwise_loss" : "L2DistLoss()",
+            "crossover_probability": 0.04,
+            "complexity_of_constants": 0.5,        # Favorise l'intercept
+            "complexity_of_variables": 1,
+            "constraints":{'*': (1, 1)},
+            "select_k_features" : 3,
+            "batching": True,
+            "batch_size": 1024,
         }
 
         self.model = PySRRegressor(
@@ -61,28 +64,58 @@ class PySRModel(BaseModel):
         return y_pred_pysr, test_time_pysr
 
     def predict_24h(self, x, steps_per_day=96):
+        equation_str = self.model.get_best()["equation"]
         n = len(x)
-        predictions =[]
+        predictions = np.zeros(n)
+        f = eval(f"lambda x0, x1, x2: {equation_str.replace('x0', 'x0').replace('x1', 'x1').replace('x2', 'x2')}")
+        t_out_all = x[:, 1]
+        q_hvac_all = x[:, 2]
         start = time.perf_counter()
         for i in range(0, n, steps_per_day):
             t_zone_actuelle = x[i,0]
             end = min(i + steps_per_day, n)
-            predictions.append(t_zone_actuelle)
+            predictions[i] = t_zone_actuelle
             for t in range(i, end-1):
-                x_input = np.array([[t_zone_actuelle, x[t,1], x[t,2]]])
-                t_suivante = self.model.predict(x_input)
-                valeur_pred = t_suivante[0]
-                predictions.append(valeur_pred)
+                valeur_pred = f(t_zone_actuelle, t_out_all[t], q_hvac_all[t])
+                predictions[t+1]= valeur_pred
                 t_zone_actuelle = valeur_pred
         elapsed = time.perf_counter() - start
         return predictions, elapsed
+
+    def predict_24hnorm(self, x_real, scaler_X, scaler_y, steps_per_day=96):
+
+        x_scaled = scaler_X.transform(x_real)
+
+        # Récupération de l'équation rapide (sur données scaled)
+        equation_str = self.model.get_best()["equation"]
+        f_scaled = eval(f"lambda x0, x1, x2: {equation_str}")
+
+        n = len(x_real)
+        predictions_scaled = np.zeros(n)
+        # Extraire les colonnes pour un accès direct (vitesse maximale)
+        x1_scaled = x_scaled[:, 1]
+        x2_scaled = x_scaled[:, 2]
+        start = time.perf_counter()
+
+        for i in range(0, n, steps_per_day):
+            t_zone_actuelle_scaled = x_scaled[i, 0]
+            predictions_scaled[i] = t_zone_actuelle_scaled
+
+            end = min(i + steps_per_day, n)
+            for t in range(i, end - 1):
+                t_next_scaled = f_scaled(t_zone_actuelle_scaled, x1_scaled[t], x2_scaled[t])
+                predictions_scaled[t + 1] = t_next_scaled
+                t_zone_actuelle_scaled = t_next_scaled
+
+        predictions_real = scaler_y.inverse_transform(predictions_scaled.reshape(-1, 1)).flatten()
+        elapsed = time.perf_counter() - start
+        return predictions_real, elapsed
 
     def tune_optuna(self, x_train, y_train, x_val, y_val, n_trials = 20, timeout= None):
 
         def objective(trial):
             params = {
-                "niterations": trial.suggest_int("niterations", 10, 100),
-                "maxsize": trial.suggest_int("maxsize", 10, 30),
+                "crossover_probability": trial.suggest_int("crossover_probability", 0.02, 0.5),
                 "parsimony": trial.suggest_float("parsimony", 1e-4, 1e-2, log=True),
                 "populations": trial.suggest_int("populations", 5, 20),
             }
@@ -131,3 +164,32 @@ class PySRModel(BaseModel):
         }
         fulldict = { **pysr_params_clean, **self.fixed_params, **bestdict}
         return fulldict
+
+    def denormalize_pysr_equation(self, scaler_X, scaler_y):
+        """
+        Transforme l'équation normalisée de PySR en équation réelle.
+        """
+        # 1. Récupérer l'expression SymPy brute du modèle
+        # (Par défaut, récupère la meilleure équation selon le score)
+        expr = self.model.sympy()
+
+        # 2. Définir les symboles (x0, x1, ...) correspondant aux colonnes de X
+        n_features = scaler_X.n_features_in_
+        x_symbols = [sympy.Symbol(f'x{i}') for i in range(n_features)]
+
+        # 3. Créer le dictionnaire de substitution pour X
+        # x_norm = (x_reel - mean) / std
+        substitutions = {
+            x_symbols[i]: (x_symbols[i] - scaler_X.mean_[i]) / scaler_X.scale_[i]
+            for i in range(n_features)
+        }
+
+        # 4. Appliquer la substitution dans l'équation
+        expr_with_real_x = expr.subs(substitutions)
+
+        # 5. Dénormaliser la sortie Y
+        # y_reel = (y_norm * std_y) + mean_y
+        final_expr = (expr_with_real_x * scaler_y.scale_[0]) + scaler_y.mean_[0]
+
+        # 6. Simplifier l'expression algébrique
+        return sympy.simplify(final_expr)
