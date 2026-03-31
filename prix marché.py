@@ -1,93 +1,19 @@
 import pandas as pd
 import importlib
-
-import random
+import numpy as np
 from src import communs
+import matplotlib.pyplot as plt
 import pyomo.environ as pyo
 importlib.reload(communs)
 
-# 1. Charger le fichier
-df = pd.read_csv('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv')
+selected_days, dict_days_prices, df_prix = communs.process_market_prices('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv', seed = 42)
+data_12days, data_annual = communs.load_data_opti_new("dataset/modèle habitation/anneeClassique/model_annee_classique.csv", selected_days)
 
-# 2. Nettoyage de la colonne temporelle
-# On prend la partie gauche avant le " - "
-df['datetime_str'] = df['MTU (CET/CEST)'].str.split(' - ').str[0]
-
-# On retire les mentions (CET) ou (CEST) qui font planter le to_datetime
-df['datetime_str'] = df['datetime_str'].str.replace(' (CET)', '', regex=False)
-df['datetime_str'] = df['datetime_str'].str.replace(' (CEST)', '', regex=False)
-
-# Conversion avec format mixte pour être tranquille
-df['datetime'] = pd.to_datetime(df['datetime_str'], dayfirst=True, errors='coerce')
-
-# --- SOLUTION À L'ERREUR DES DOUBLONS ---
-# On ne garde qu'une seule entrée par horodatage s'il y a des répétitions
-df = df.drop_duplicates(subset=['datetime'])
-df.set_index('datetime', inplace=True)
-df = df.sort_index()
-
-# 3. Conversion d'unité : EUR/MWh -> EUR/kWh
-# Division par 1000
-df['price_eur_kwh'] = df['Day-ahead Price (EUR/MWh)'] / 1000
-
-# 4. Interpolation
-prices_series = df['price_eur_kwh'].copy()
-
-# On identifie la période "paliers" (avant le 1er octobre 2025)
-mask_paliers = prices_series.index < '2025-10-01'
-# Pour cette période, on ne garde que les points "pile à l'heure" (:00)
-# pour forcer l'interpolation à créer une rampe entre H et H+1
-prices_to_interp = prices_series.copy()
-prices_to_interp.loc[mask_paliers & (prices_to_interp.index.minute != 0)] = None
-
-# On lance l'interpolation sur tout le dataset
-# - Avant oct : il comblera les 'None' par une rampe entre les heures.
-# - Après oct : il ne touchera à rien car il n'y a pas de 'None'.
-df['prices_15min'] = prices_to_interp.interpolate(method='linear')
-#prices_15min = df['price_eur_kwh'].resample('15T').interpolate(method='linear')
-
-# 5. Sélection des 12 jours (Reproductible)
-random.seed(42)  # Fixe le hasard
-#selected_days = []
-#for month in range(1, 13):
-    # On choisit un jour entre le 1 et le 28
- #   day = random.randint(1, 28)
-#    date_obj = pd.Timestamp(year=2025, month=month, day=day)
- #   selected_days.append(date_obj)
-selected_days = [f"2025-{m:02d}-{random.randint(1, 28):02d}" for m in range(1, 13)]
-
-#print("Jours sélectionnés :", [d.strftime('%Y-%m-%d') for d in selected_days])
-
-# 5. Stockage des vecteurs (96 points par jour)
-dict_days_prices = {}
-for day in selected_days:
-    start_ts = pd.Timestamp(day + " 00:00:00")
-    end_ts = pd.Timestamp(day + " 23:45:00")
-    try:
-        data = df['prices_15min'].loc[start_ts:end_ts]
-        if len(data) >= 96:
-            dict_days_prices[day] = data.iloc[:96].values
-            print(f"✅ Jour {day} : {len(data.iloc[:96])} points prêts.")
-    except KeyError:
-        print(f"❌ Jour {day} : Données manquantes.")
+# --- PARAMÈTRES PHYSIQUES ---
+eta_h, eta_c = communs.calculate_average_efficiencies(data_annual) #c= 3.73 h = 1.86
 
 
-
-
-data_12days = communs.load_data_opti("dataset/modèle habitation/model_annee_dynamique.csv", selected_days)
-
-
-
-# --- PARAMÈTRES PHYSIQUES (À adapter selon tes calculs EnergyPlus) ---
-eta_h = 1.48    # Efficacité chauffage (Q_heat / P_heat)
-eta_c = 3.0      # Efficacité refroidissement (Q_cool / P_cool)
-P_h_max = 5000   # Watts
-P_c_max = 5000   # Watts
-T_min = 18     # Confort min
-T_max = 21  # Confort max
-dt = 0.25        # 15 minutes = 0.25 heure
-
-def solve_hvac_optimization(day_str, prices_vector, Tout_vector, T_initial):
+def solve_hvac_optimization(day_str, prices_vector, Tout_vector, T_initial, Tset_heat, Tset_cool):
     """+ Pfans_vector[t]
     day_str: '2025-01-12'
     prices_vector: array de 96 prix (€/kWh)
@@ -97,61 +23,82 @@ def solve_hvac_optimization(day_str, prices_vector, Tout_vector, T_initial):
     # 1. Indices (0 à 95 pour les 96 quartiers d'heure)
     model.T = pyo.RangeSet(0, 95)
 
-    # --- VARIABLES DE DÉCISION ---
-    model.P_heating = pyo.Var(model.T, domain=pyo.NonNegativeReals, bounds=(0, P_h_max))
-    model.P_cooling = pyo.Var(model.T, domain=pyo.NonNegativeReals, bounds=(0, P_c_max))
-    model.T_zone = pyo.Var(model.T, domain=pyo.Reals, bounds=(T_min, T_max))
+    # --- Paramètres ---
+    model.eta_h = pyo.Param(initialize=eta_h)
+    model.eta_c = pyo.Param(initialize=eta_c)
+    model.Ph_max = pyo.Param(initialize=7120.17734)
+    model.Pc_max = pyo.Param(initialize=7120.17734)
+    model.dt = pyo.Param(initialize=0.25)
+    model.tmin = pyo.Param(initialize=20)
+    model.tmax = pyo.Param(initialize=24)
 
+    # --- VARIABLES DE DÉCISION ---
+    model.P_heating = pyo.Var(model.T, domain=pyo.NonNegativeReals, bounds=(0, model.Ph_max))
+    model.P_cooling = pyo.Var(model.T, domain=pyo.NonNegativeReals, bounds=(0, model.Pc_max))
+    model.T_zone = pyo.Var(model.T, domain=pyo.Reals, bounds = (model.tmin, model.tmax))
+    # --- variable binaire pour non-simultanéité ---
+    model.z = pyo.Var(model.T, domain = pyo.Binary)
 
     # --- expression
     def phvac_total_rule(m, t):
         return m.P_heating[t] + m.P_cooling[t] #+ Pfans_vector[t]
     model.Phvac = pyo.Expression(model.T, rule=phvac_total_rule)
 
+    def real_cost_rule(m):
+        return sum(prices_vector[t] * (m.P_heating[t] + m.P_cooling[t]) / 1000 * m.dt for t in m.T)
+
+    model.real_cost = pyo.Expression(rule=real_cost_rule)
+
     def qhvac_rule(m, t):
-        return (eta_h * m.P_heating[t]) - (eta_c * m.P_cooling[t])
+        return (m.eta_h * m.P_heating[t]) - (m.eta_c * m.P_cooling[t])
     model.Qhvac = pyo.Expression(model.T, rule=qhvac_rule)
 
     # --- FONCTION OBJECTIF (Coût total €) ---
     def objective_rule(m):
         # Coût = Prix * (P_heat + P_cool + P_fans) * 0.25
         # il y a toujours un Pfans
-        return sum(prices_vector[t] * (m.P_heating[t] + m.P_cooling[t])/1000 * dt for t in m.T)
+        return sum(prices_vector[t] * (m.P_heating[t] + m.P_cooling[t])/1000 * m.dt for t in m.T)
 
     model.cost = pyo.Objective(rule=objective_rule, sense=pyo.minimize)
 
+    # --- contraintes ---
+    #def comfort_rule(m, t):
+     #T_min[t] <= T_zone[t] <= T_max[t]
+     #return Tset_heat[t], m.T_zone[t], Tset_cool[t]
+    #model.comfort = pyo.Constraint(model.T, rule=comfort_rule)
 
-    #contraintes
-    # 2. Dynamique Thermique (Modèle PySR / Linéaire)
+    def heat_exc_rule(m, t):
+        return m.P_heating[t] <= m.Ph_max * m.z[t]
+    model.heat_excl = pyo.Constraint(model.T, rule=heat_exc_rule)
+    def cool_excl_rule(m,t):
+        return m.P_cooling[t] <= m.Pc_max * (1-m.z[t])
+    model.cool_excl = pyo.Constraint(model.T, rule=cool_excl_rule)
+
     def thermal_dynamics_rule(m, t):
-        # Condition initiale à minuit (t=0)
-        if t == 0:
-            return m.T_zone[0] == T_initial
 
+        # Condition initiale à minuit (t=0)
+        if t ==0:
+            return m.T_zone[0] == T_initial[0]
         # On arrête la règle à t=94 pour que t+1 ne dépasse pas 95
-        if t >= 95:
-            return pyo.Constraint.Skip
+        #if t >= 95:
+        #    return pyo.Constraint.Skip
 
         # Équation : T_future (t+1) = f(T_actuelle, Tout_actuelle, Qhvac_actuelle)
         # On utilise tes coefficients a, b, c, d
         a, b, c, d = 0.952113783794049, 0.0287562819434527, 0.000135946989606225, 0.709746652516824
 
-        return m.T_zone[t + 1] == (a * m.T_zone[t] + b * Tout_vector[t] + c * m.Qhvac[t] + d)
+        return m.T_zone[t] == (a * m.T_zone[t-1] + b * Tout_vector[t-1] + c * m.Qhvac[t-1] + d)
 
     model.dynamics = pyo.Constraint(model.T, rule=thermal_dynamics_rule)
 
     # --- RÉSOLUTION ---
-    # Si équation est linéaire, glpk est parfait.
-    #ipopt pour non linéaire
-    solver = pyo.SolverFactory('glpk')
-
+    solver = pyo.SolverFactory('gurobi')
     solver.solve(model)
 
     return model
 
 
 # --- BOUCLE D'EXÉCUTION DES 12 JOURS ---
-
 results_all_days = {}
 
 for day in selected_days:
@@ -159,28 +106,33 @@ for day in selected_days:
     try:
         # 1. Vérification de la présence des données
         if day not in dict_days_prices or day not in data_12days:
-            print(f"⚠️ Données manquantes pour le jour {day}. Passage au suivant.")
+            print(f" Données manquantes pour le jour {day}. Passage au suivant.")
             continue
         # 1. Extraction des données préparées
         prices = dict_days_prices[day]
         tout = data_12days[day]['Tout']
-        t_init = data_12days[day]['Tzone_init']
+        t_init = data_12days[day]['Tzone_real']
         pfans = data_12days[day]['Pfans']  # Assure-toi que Pfans est bien dans ton dictionnaire commun
+        Tset_heat = data_12days[day]['Tset_heat']
+        Tset_cool = data_12days[day]['Tset_cool']
 
         # 2. Appel de l'optimiseur
-        model_resolved = solve_hvac_optimization(day, prices, tout, t_init)
+        model_resolved = solve_hvac_optimization(day, prices, tout, t_init, Tset_heat, Tset_cool)
 
         # 3. Extraction des vecteurs de résultats
         p_heat_opt = [pyo.value(model_resolved.P_heating[t]) for t in model_resolved.T]
         p_cool_opt = [pyo.value(model_resolved.P_cooling[t]) for t in model_resolved.T]
         t_zone_opt = [pyo.value(model_resolved.T_zone[t]) for t in model_resolved.T]
-        total_cost = pyo.value(model_resolved.cost)
+        total_cost = pyo.value(model_resolved.real_cost)
 
         # 4. Stockage dans le dictionnaire global
         results_all_days[day] = {
             'P_heating': p_heat_opt,
             'P_cooling': p_cool_opt,
             'T_zone': t_zone_opt,
+            'T_real': data_12days[day]['Tzone_real'],
+            'Tset_heat' : data_12days[day]['Tset_heat'],
+            'Tset_cool' : data_12days[day]['Tset_cool'],
             'Cost': total_cost,
             'Prices': prices
         }
@@ -222,8 +174,98 @@ df_final = pd.concat(all_dfs, ignore_index=True)
 
 # DataFrame de résumé (12 lignes, une par jour)
 df_summary = pd.DataFrame(summary_data)
+Results = pd.DataFrame(results_all_days)
 data_days = pd.DataFrame(data_12days)
 # --- AFFICHAGE ET EXPORT ---
 print("\n--- RÉSUMÉ DES COÛTS PAR JOUR ---")
 print(df_summary)
 print("hello")
+
+
+def plot_selected_days(results_all_days, data_12days, days_to_plot):
+    """
+    days_to_plot: ex ['2025-01-21', '2025-06-08']
+    """
+    Ph_max = 7120.17734
+    Pc_max = 7120.17734
+    tmin = 20
+    tmax=24
+    hours = np.linspace(0, 24, 96, endpoint=False)
+    xticks = np.arange(0, 25, 2)
+
+    # Couleurs contrastées : Bleu (Hiver/Froid) et Orange (Eté/Chaud)
+    colors = ['blue', 'orange']
+
+    # --- FIGURE 1 : TEMPÉRATURES ---
+    plt.figure()
+    for i, day in enumerate(days_to_plot):
+        if day in results_all_days:
+            res, data = results_all_days[day], data_12days[day]
+            c = colors[i % len(colors)]
+            # Zone réelle optimisée
+            plt.plot(hours, res['T_zone'], color=c, label=f"T_zone {day}", linewidth=2.5)
+            # Bornes (Setpoints) avec styles distincts pour ne pas confondre
+
+    plt.axhline(y=tmin, color='blue', linestyle='--', alpha=0.3, label="Température minimale")
+    plt.axhline(y=tmax, color='red', linestyle='--', alpha=0.3, label="Température maximale")
+    plt.title("Analyse Thermique : Évolution de la Température de Zone")
+    plt.ylabel("Température [°C]")
+    plt.xlabel("Heure [h]")
+    plt.xticks(xticks)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+
+    # --- FIGURE 2 : PUISSANCES HVAC ---
+    plt.figure()
+    for i, day in enumerate(days_to_plot):
+        if day in results_all_days:
+            res = results_all_days[day]
+            c = colors[i % len(colors)]
+            p_net = np.array(res['P_heating']) - np.array(res['P_cooling'])
+            plt.step(hours, p_net, where='post', color=c, label=f"P_net {day}", linewidth=2)
+
+    plt.axhline(y=Ph_max, color='red', linestyle='--', alpha=0.3, label="P_max Chauffage")
+    plt.axhline(y=-Pc_max, color='blue', linestyle='--', alpha=0.3, label="P_max Refroidissement")
+    plt.title("Profil de Puissance Électrique HVAC")
+    plt.ylabel("Puissance [W] (Chaud > 0 / Froid < 0)")
+    plt.xlabel("Heure [h]")
+    plt.xticks(xticks)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+
+    # --- FIGURE 3 : PRIX ET COÛT CUMULÉ (Axe Simple) ---
+    plt.figure()
+    bar_width = 0.15
+    for i, day in enumerate(days_to_plot):
+        if day in results_all_days:
+            res = results_all_days[day]
+
+            # 1. Calcul du coût réel payé à l'instant t (€ pour 15 min)
+            # On récupère Pfans depuis les données d'EnergyPlus
+            p_tot = np.array(res['P_heating']) + np.array(res['P_cooling'])
+            step_costs = (res['Prices'] * p_tot / 1000 * 0.25)
+
+            # 2. Affichage du Prix ENTSO-E (Courbe en escalier - Pointillés)
+            plt.step(hours, res['Prices'], where='post', color='blue', linestyle='--',
+                     alpha=0.5, label=f"Prix ENTSO-E {day} [€/kWh]")
+
+            # 3. Affichage du Coût par pas de temps (Barres)
+            # On décale légèrement les barres du 2ème jour pour la visibilité
+            offset = i * bar_width
+            plt.bar(hours + offset, step_costs, width=bar_width, color='black',
+                    alpha=0.8, label=f"Coût HVAC {day} [€/15min]", align='edge')
+
+    plt.axhline(0, color='black', linewidth=0.8, alpha=0.5)  # Ligne de zéro
+    plt.title("Analyse Économique : Signal de Prix et coût par Quart d'Heure")
+    plt.ylabel("Valeur (€ ou €/kWh)")
+    plt.xlabel("Heure [h]")
+    plt.xticks(xticks)
+    plt.grid(True, linestyle='--', alpha=0.5)
+
+    plt.show()
+
+# --- EXEMPLE D'APPEL ---
+jours_interessants = ['2025-01-21'] # Un jour cher et un jour avec prix négatifs
+plot_selected_days(results_all_days, data_12days, jours_interessants)
