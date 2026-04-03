@@ -21,10 +21,10 @@ randomstate=42
 #soit airport + brussel bel ensemble ou annee dyn
 df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
 df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-#df = communs.load_data("dataset/modèle habitation/model_annee_dynamique.csv")
-#df_test = communs.load_data("dataset/modèle habitation/model_annee_dynamique_brussel_bel.csv")
+#df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv")
+#df_test = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique_brussel_bel.csv")
 idf = load_idf(
-    "dataset/modèle habitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
+    "dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
 )
 
