@@ -5912,6 +5912,26 @@ OUTPUT:VARIABLE,
     Site Direct Solar Radiation Rate per Area,    !- Variable Name
     Timestep;                 !- Reporting Frequency
 
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermostat Heating Setpoint Temperature,    !- Variable Name
+    Timestep;                 !- Reporting Frequency
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermostat Cooling Setpoint Temperature,    !- Variable Name
+    Timestep;                 !- Reporting Frequency
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Ventilation Sensible Heat Gain Rate,    !- Variable Name
+    Timestep;                 !- Reporting Frequency
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Ventilation Sensible Heat Loss Rate,    !- Variable Name
+    Timestep;                 !- Reporting Frequency
+
 Output:Meter,
     Electricity:Facility,     !- Key Name
     Timestep;                 !- Reporting Frequency
