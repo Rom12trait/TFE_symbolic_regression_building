@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import random
 import os
 from pathlib import Path
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -41,7 +42,61 @@ def load_data(filepath):
     return df
 
 
-def load_data_opti(filepath, selected_days):
+def process_market_prices(filepath, seed=42):
+    """
+    Traite le fichier de prix ENTSO-E, sélectionne 12 jours et crée les vecteurs de prix.
+
+    Args:
+        filepath (str): Chemin vers le fichier CSV des prix.
+        seed (int): Graine pour la reproductibilité du tirage aléatoire.
+
+    Returns:
+        tuple: (selected_days, dict_days_prices, df_full)
+    """
+    # 1. Chargement
+    df = pd.read_csv(filepath)
+
+    # 2. Nettoyage temporel
+    df['datetime_str'] = df['MTU (CET/CEST)'].str.split(' - ').str[0]
+    df['datetime_str'] = df['datetime_str'].str.replace(' (CET)', '', regex=False)
+    df['datetime_str'] = df['datetime_str'].str.replace(' (CEST)', '', regex=False)
+
+    df['datetime'] = pd.to_datetime(df['datetime_str'], dayfirst=True, errors='coerce')
+    df = df.drop_duplicates(subset=['datetime']).set_index('datetime').sort_index()
+
+    # 3. Conversion EUR/MWh -> EUR/kWh
+    df['price_eur_kwh'] = df['Day-ahead Price (EUR/MWh)'] / 1000
+
+    # 4. Interpolation 15-min (gestion des rampes avant octobre)
+    prices_series = df['price_eur_kwh'].copy()
+    mask_paliers = prices_series.index < '2025-10-01'
+
+    prices_to_interp = prices_series.copy()
+    # On ne garde que les points "pile à l'heure" pour forcer la rampe
+    prices_to_interp.loc[mask_paliers & (prices_to_interp.index.minute != 0)] = None
+
+    df['prices_15min'] = prices_to_interp.interpolate(method='linear')
+
+    # 5. Sélection aléatoire reproductible des 12 jours
+    random.seed(seed)
+    selected_days = [f"2025-{m:02d}-{random.randint(1, 28):02d}" for m in range(1, 13)]
+
+    # 6. Extraction des vecteurs de 96 points
+    dict_days_prices = {}
+    for day in selected_days:
+        start_ts = pd.Timestamp(day + " 00:00:00")
+        end_ts = pd.Timestamp(day + " 23:45:00")
+        try:
+            data = df['prices_15min'].loc[start_ts:end_ts]
+            if len(data) >= 96:
+                dict_days_prices[day] = data.iloc[:96].values
+                print(f"✅ Jour {day} : 96 points de prix extraits.")
+        except KeyError:
+            print(f"❌ Jour {day} : Données manquantes dans le fichier source.")
+
+    return selected_days, dict_days_prices, df
+
+def load_data_opti_new(filepath, selected_days):
     # Paramètres de base
     rows_per_day = 96
     design_days = 2 * rows_per_day + 1
@@ -51,7 +106,11 @@ def load_data_opti(filepath, selected_days):
         'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
         'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
         'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
-        'Fans:Electricity [J](TimeStep)': 'Pfans'
+        'Fans:Electricity [J](TimeStep)': 'Pfans',
+        'LIVING_UNIT1:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
+        'LIVING_UNIT1:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
+        'Heating:Electricity [J](TimeStep)': 'P_heating',
+        'Cooling:Electricity [J](TimeStep)': 'P_cooling'
     }
 
     # Chargement en sautant les jours de dimensionnement
@@ -59,44 +118,64 @@ def load_data_opti(filepath, selected_days):
     df.columns = df.columns.str.strip()
     df.rename(columns=dict_newindex, inplace=True)
 
-    # --- TRAITEMENT DU DATETIME (MM/DD HH:MM:SS -> 2025-MM-DD) ---
-    # On ajoute l'année 2025 devant la chaîne
-    df['Date/Time'] = df['Date/Time'].str.strip()
-    # Gestion du 24:00:00 (EnergyPlus style) en le ramenant à 00:00:00
-    df['Date/Time'] = df['Date/Time'].str.replace('24:00:00', '00:00:00')
+    # 1. Traitement spécifique du format EnergyPlus
+    def fix_ep_datetime(row):
+        date_part = row['Date/Time'].strip()
+        if '24:00:00' in date_part:
+            # On remplace 24h par 00h et on ajoutera un jour après conversion
+            clean_date = date_part.replace('24:00:00', '00:00:00')
+            return pd.to_datetime("2025/" + clean_date, format="%Y/%m/%d %H:%M:%S") + pd.Timedelta(days=1)
+        else:
+            return pd.to_datetime("2025/" + date_part, format="%Y/%m/%d %H:%M:%S")
 
-    df['datetime'] = pd.to_datetime("2025/" + df['Date/Time'], format="%Y/%m/%d %H:%M:%S")
-
-    # Si on a remplacé 24:00 par 00:00, ce point appartient techniquement au jour suivant
-    # On ajuste les index pour que le 00:00:00 soit bien la fin du jour précédent ou le début du nouveau
+    df['datetime'] = df.apply(fix_ep_datetime, axis=1)
     df.set_index('datetime', inplace=True)
     df = df.sort_index()
 
-    # --- EXTRACTION POUR LES 12 JOURS ---
     data_12_days = {}
-
     for day in selected_days:
+        # Pour le marché 00:00 -> 23:45, on prend :
+        # - La ligne 00:00:00 (qui était le 24:00:00 de la veille) -> T_initial
+        # - Les lignes 00:15:00 jusqu'à 23:45:00 -> Les 95 pas suivants
         start = pd.Timestamp(day + " 00:00:00")
         end = pd.Timestamp(day + " 23:45:00")
 
-        try:
-            day_slice = df.loc[start:end].copy()
+        day_slice = df.loc[start:end]
+        if len(day_slice) >= 96:  # On a 00:00 + les 96 quarts d'heure
+            # T_initial est la valeur à minuit pile (t=0)
 
-            if len(day_slice) == 96:
-                data_12_days[day] = {
-                    'Tout': day_slice['Tout'].values,
-                    'Tzone_init': day_slice['Tzone'].iloc[0],
-                    'Pfans': day_slice['Pfans'].values/900 if 'Pfans' in day_slice else np.full(96, 100.0),
-                    # 100W par défaut
-                    'Tzone_real': day_slice['Tzone'].values  # Pour comparer après l'opti
-                }
-            else:
-                print(f"⚠️ Jour {day} incomplet dans EnergyPlus ({len(day_slice)} points)")
-        except KeyError:
-            print(f"❌ Jour {day} absent du fichier EnergyPlus")
+            # Les vecteurs (Tout, Setpoints) pour l'optimisation (t=0 à 95)
+            # On ignore le 00:00 pour les variables de flux car le premier
+            # impact du HVAC se voit à 00:15
+            data_12_days[day] = {
+                'Tout': day_slice['Tout'].iloc[:96].values,
+                'Tset_heat': day_slice['Tset_heat'].iloc[:96].values,
+                'Tset_cool': day_slice['Tset_cool'].iloc[:96].values,
+                'Tzone_init': day_slice['Tzone'].iloc[0],
+                'Tzone_real': day_slice['Tzone'].values,
+                'Pfans': day_slice['Pfans'].iloc[:96].values / 900
+            }
 
-    return data_12_days
+    return data_12_days, df
 
+def calculate_average_efficiencies(df_annual):
+
+    # éviter les divisions par zéro
+    mask_heating = (df_annual['P_heating'] > 0)
+    mask_cooling = (df_annual['P_cooling'] > 0)
+
+    # 2. Calcul du rendement instantané : Q_thermique / P_electrique
+    eta_h_series = df_annual.loc[mask_heating, 'Heating_living_unit'] / (df_annual.loc[mask_heating, 'P_heating']/900)
+    eta_c_series = df_annual.loc[mask_cooling, 'Cooling_living_unit'] / (df_annual.loc[mask_cooling, 'P_cooling']/900)
+
+    avg_eta_h = eta_h_series.mean()
+    avg_eta_c = eta_c_series.mean()
+
+    print(f"--- Analyse des rendements annuels (EnergyPlus) ---")
+    print(f"Moyenne COP (Chauffage) : {avg_eta_h:.3f}")
+    print(f"Moyenne EER (Refroidissement) : {avg_eta_c:.3f}")
+
+    return avg_eta_h, avg_eta_c
 
 def compute_metrics(y_true, y_pred, train_time = None, test_time = None, dt_sec = 900):
 
@@ -268,4 +347,6 @@ def tolatex(runfile):
         f.write(latex_code)
 
     print("Conversion réussie ! Fichier 'tableau.tex' généré.")
+
+
 

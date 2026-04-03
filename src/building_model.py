@@ -68,7 +68,23 @@ class BuildingModel:
         # Simulation variables
         self.fullsimulation = None
         self.simulation = None
-        self.simulationvariables = None
+        self.simulationvariables = [
+    "OutputVariable,Zone Mean Air Temperature,LIVING_UNIT1",
+    "OutputVariable,Site Outdoor Air Drybulb Temperature,ENVIRONMENT",
+    "OutputVariable,Zone Air System Sensible Heating Rate,LIVING_UNIT1",
+    "OutputVariable,Zone Air System Sensible Cooling Rate,LIVING_UNIT1",
+    "OutputMeter,Electricity:Facility",
+    "OutputMeter,Electricity:Building",
+    "OutputMeter,Electricity:HVAC",
+    "OutputMeter,Heating:Electricity",
+    "OutputMeter,Cooling:Electricity",
+    "OutputMeter,Fans:Electricity",
+    #"OutputVariable,Zone Thermostat Heating Setpoint Temperature,living_unit1",
+    "OutputVariable,Zone Thermostat Cooling Setpoint Temperature,living_unit1"
+
+    #"Actuator,Schedule:Constant,Schedule Value,heating_sch", # Nom de ton schedule chauffage
+    #"Actuator,Schedule:Constant,Schedule Value,cooling_sch"  # Nom de ton schedule clim
+]
         self.useless_variables = None
         self.simulationfrequency = None
         self.desiredfrequency = None
@@ -225,9 +241,7 @@ class BuildingModel:
         return pd.concat(dfs, axis=1, keys=cols,
                          names=['zone', 'variable'])
 
-    def set_simulationvariables(self, simulationvariables: list,
-                                simulationfrequency: int,
-                                desiredfrequency: int = 1):
+    def set_simulationvariables(self, simulationvariables: list, simulationfrequency: int, desiredfrequency: int = 1):
         """
         Parameters
         ----------
@@ -289,7 +303,7 @@ list)
     def load_simulation(self, filepath_hdf: str, tz: str = "UTC"):
         """
         load the simulation from the path
-        :param path: path to the hdf file
+        :param filepath_hdf: path to the hdf file
         :return:
         """
         with pd.HDFStore(filepath_hdf, 'r') as store:
