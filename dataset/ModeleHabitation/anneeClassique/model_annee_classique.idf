@@ -1678,22 +1678,6 @@ Schedule:Compact,
     25.55;                    !- Field 4
 
 Schedule:Compact,
-    heating_sch,              !- Name
-    Temperature,              !- Schedule Type Limits Name
-    Through: 12/31,           !- Field 1
-    For: AllDays,             !- Field 2
-    Until: 24:00,             !- Field 3
-    22.2222222222223;         !- Field 4
-
-Schedule:Compact,
-    cooling_sch,              !- Name
-    Temperature,              !- Schedule Type Limits Name
-    Through: 12/31,           !- Field 1
-    For: AllDays,             !- Field 2
-    Until: 24:00,             !- Field 3
-    23.888888888889;          !- Field 4
-
-Schedule:Compact,
     heating_sch_HERSprogTstat,    !- Name
     Temperature,              !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
@@ -1828,6 +1812,30 @@ Schedule:Constant,
     DOASlowtemp,              !- Name
     Temperature,              !- Schedule Type Limits Name
     -60;                      !- Hourly Value
+
+SCHEDULE:FILE,
+    heating_sch,              !- Name
+    Temperature,              !- Schedule Type Limits Name
+    consignes_hvac.csv,       !- File Name
+    1,                        !- Column Number
+    0,                        !- Rows to Skip at Top
+    8760,                     !- Number of Hours of Data
+    Comma,                    !- Column Separator
+    No,                       !- Interpolate to Timestep
+    60,                       !- Minutes per Item
+    Yes;                      !- Adjust Schedule for Daylight Savings
+
+SCHEDULE:FILE,
+    cooling_sch,              !- Name
+    Temperature,              !- Schedule Type Limits Name
+    consignes_hvac.csv,       !- File Name
+    2,                        !- Column Number
+    0,                        !- Rows to Skip at Top
+    8760,                     !- Number of Hours of Data
+    Comma,                    !- Column Separator
+    No,                       !- Interpolate to Timestep
+    60,                       !- Minutes per Item
+    Yes;                      !- Adjust Schedule for Daylight Savings
 
 Material,
     sheathing_consol_layer,    !- Name

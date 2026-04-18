@@ -6,9 +6,11 @@ from src import communs
 import matplotlib.pyplot as plt
 import pyomo.environ as pyo
 from datetime import datetime, timedelta
+import zoneinfo
+from src.communs import load_data_api
 importlib.reload(communs)
 from src.opti import EnergyPlusSimulator
-from src.building_model import BuildingModel
+from src.building_model import BuildingModel, MediumOffice
 
 selected_days, dict_days_prices, df_prix = communs.process_market_prices('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv', seed = 42)
 data_12days, data_annual = communs.load_data_opti_new(
@@ -187,7 +189,7 @@ def export_opti_results_to_excel(df_summary, results_all_days, output_path ="opt
             sheet_name = f"Day_{day}"
             df_day.to_excel(writer, sheet_name=sheet_name, index=False)
 
-export_opti_results_to_excel(df_summary, results_all_days)
+#export_opti_results_to_excel(df_summary, results_all_days)
 
 def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
     """
@@ -255,43 +257,39 @@ def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
 
 # --- BOUCLE D'EXÉCUTION ---
 # On boucle sur tous les jours présents dans tes résultats (les 12 jours)
-for day in results_all_days.keys():
-    print(f"Génération des graphiques pour : {day}...")
-    save_plot_day(day, results_all_days)
+#for day in results_all_days.keys():
+ #   print(f"Génération des graphiques pour : {day}...")
+  #  save_plot_day(day, results_all_days)
 
 #%%
 def prepare_for_api(day_str, t_zone_opt):
     """
     Convertit le vecteur de 96 points en DataFrame temporel pour l'API.
     """
-    # Création de l'index datetime (doit matcher l'année de get_time, ici 2017 par défaut)
-    start_dt = datetime.strptime(f"2017-{day_str[5:]} 00:00", "%Y-%m-%d %H:%M")
-    times = [start_dt + timedelta(minutes=15 * i) for i in range(96)]
+    # Création de l'index sur 97 points (00:00 à 00:00 J+1)
+    # On utilise l'argument 'day_str' pour caler la date
+    start_dt = pd.to_datetime(day_str).replace(year=2017)
+
+    # Générer 97 timestamps espacés de 15 min
+    times = pd.date_range(start=start_dt, periods=len(t_opt), freq='15min', tz= 'UTC')
 
     # Création du DataFrame que l'API va interpoler
-    df_results = pd.DataFrame(index=times)
-    df_results['t_in'] = t_zone_opt
+    df = pd.DataFrame(index=times)
+    df['Tin'] = t_zone_opt
 
-    # Ajout du fuseau horaire pour matcher ZoneInfo("UTC") de get_time
-    df_results.index = df_results.index.tz_localize("UTC")
 
-    return df_results
+    # S'assurer que le format est bien Datetime64
+    df.index = pd.to_datetime(df.index)
 
-# 1. Définition des 3 zones de ton IDF
-zone_data = {
-    'zone': ['LIVING_UNIT1', 'ATTIC_UNIT1', 'GARAGE1'],
-    'floor': [0, 1, 0],  # Étages indicatifs
-    'acu': ['Ideal Loads', None, None]  # Seul LIVING_UNIT1 est piloté
-}
+    return df
 
-zone_floor_acu = pd.DataFrame(zone_data)
-
-building_model = BuildingModel("dataset/ModeleHabitation/anneeClassique/model_annee_classique_exp.idf",
-                               "dataset/Meteo/Brussels.Natl.AP_BEL.epw",
-                        "opti/bat", zone_floor_acu= zone_floor_acu, adjacency_matrix= None)
+data_annee = communs.load_data_api("dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv")
 
 for day in selected_days:
     if day in results_all_days:
+        day_dt = pd.to_datetime(day).replace(year=2017)
+        building_model = MediumOffice(day)
+        building_model.idf_filepath = building_model.modify_idf(day_dt)
         # 1. Récupérer les T_zone optimisées
         t_opt = results_all_days[day]['T_zone']
 
@@ -299,12 +297,12 @@ for day in selected_days:
         df_api_input = prepare_for_api(day, t_opt)
 
         # 3. Injecter dans ton objet BuildingModel
-        # On suppose que tu as une seule zone "LIVING_UNIT1"
         # Il faut que l'objet 'z' dans 'conditioned_zone_assets' reçoive ce DF
         for zone in building_model.conditioned_zone_assets:
-            if zone.name == "LIVING_UNIT1":
+            print(zone.name)
+            if zone.name == "LIVINGUNIT":
                 zone.expected_results = df_api_input
-
+        building_model.simulation_exante = data_annee
         # 4. Configurer le simulateur
         simulator = EnergyPlusSimulator()
 
@@ -312,10 +310,14 @@ for day in selected_days:
         # run_period_of_interest est souvent 1 (dépend de ton IDF)
         df_final_api, warmup_steps = simulator.run_simulation(
             buildingmodel=building_model,
-            run_period_of_interest=1,
+            run_period_of_interest=3,
             callbacks=simulator.callback_temperature_control,
             verbose=True
         )
 
         # 6. Sauvegarder les vrais résultats EnergyPlus
         df_final_api.to_csv(f"opti/bat/validation_EP_{day}.csv", sep=";")
+
+
+#%%%
+

@@ -2347,7 +2347,7 @@ GlobalGeometryRules,
     Relative;                 !- Coordinate System
 
 Zone,
-    living_unit1,             !- Name
+    livingunit,             !- Name
     0,                        !- Direction of Relative North
     0,                        !- X Origin
     0,                        !- Y Origin
@@ -2377,7 +2377,7 @@ Zone,
 !     Inter zone floor 1,       !- Name
 !     Floor,                    !- Surface Type
 !     Interior Floor,           !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Adiabatic,                !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2402,7 +2402,7 @@ Zone,
 !     ceiling_unit1,            !- Name
 !     Ceiling,                  !- Surface Type
 !     Interior Ceiling,         !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Zone,                     !- Outside Boundary Condition
 !     attic_unit1,              !- Outside Boundary Condition Object
@@ -2521,7 +2521,7 @@ Zone,
 !     Wall_ldf_1.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2546,7 +2546,7 @@ Zone,
 !     Wall_sdr_1.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2571,7 +2571,7 @@ Zone,
 !     Wall_ldb_1.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2596,7 +2596,7 @@ Zone,
 !     Wall_sdl_1.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2671,7 +2671,7 @@ Zone,
 !     Wall_ldb_1.garage1,       !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Zone,                     !- Outside Boundary Condition
 !     garage1,                  !- Outside Boundary Condition Object
@@ -2815,7 +2815,7 @@ Zone,
 !     Wall_ldf_2.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2840,7 +2840,7 @@ Zone,
 !     Wall_sdr_2.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2865,7 +2865,7 @@ Zone,
 !     Wall_ldb_2.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2890,7 +2890,7 @@ Zone,
 !     Wall_sdl_2.unit1,         !- Name
 !     Wall,                     !- Surface Type
 !     Exterior Wall,            !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     Outdoors,                 !- Outside Boundary Condition
 !     ,                         !- Outside Boundary Condition Object
@@ -2915,7 +2915,7 @@ Zone,
 !     Floor_unit1,              !- Name
 !     Floor,                    !- Surface Type
 !     Interior Floor,           !- Construction Name
-!     living_unit1,             !- Zone Name
+!     livingunit,             !- Zone Name
 !     ,                         !- Space Name
 !     GroundSlabPreprocessorAverage,    !- Outside Boundary Condition
 !     surfPropOthSdCoefSlabAverage,    !- Outside Boundary Condition Object
@@ -3081,8 +3081,8 @@ Door:Interzone,
     2.13414634146341;         !- Height
 
 WindowShadingControl,
-    Shades-living_unit1,      !- Name
-    living_unit1,             !- Zone Name
+    Shades-livingunit,      !- Name
+    livingunit,             !- Zone Name
     1,                        !- Shading Control Sequence Number
     InteriorBlind,            !- Shading Type
     window_w_blinds,          !- Construction with Shading Name
@@ -3109,7 +3109,7 @@ WindowShadingControl,
 InternalMass,
     Internalmass_unit1,       !- Name
     InteriorFurnishings,      !- Construction Name
-    living_unit1,             !- Zone or ZoneList Name
+    livingunit,             !- Zone or ZoneList Name
     ,                         !- Space or SpaceList Name
     9.89591078066915;         !- Surface Area
 
@@ -3273,7 +3273,7 @@ Shading:Overhang,
 
 People,
     people_unit1,             !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     Occupancy,                !- Number of People Schedule Name
     People,                   !- Number of People Calculation Method
     3,                        !- Number of People
@@ -3288,7 +3288,7 @@ People,
 
 Lights,
     Living Hardwired Lighting1,    !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     InteriorLightingHE,       !- Schedule Name
     LightingLevel,            !- Design Level Calculation Method
     232.336176039726,         !- Lighting Level
@@ -3301,7 +3301,7 @@ Lights,
 
 Lights,
     Living Plug-in Lighting1,    !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     InteriorLightingHE,       !- Schedule Name
     LightingLevel,            !- Design Level Calculation Method
     105.654201954397,         !- Lighting Level
@@ -3314,7 +3314,7 @@ Lights,
 
 ElectricEquipment,
     dishwasher1,              !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     DishWasher_equip_sch,     !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     37.1410338225909,         !- Design Level
@@ -3327,7 +3327,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     refrigerator1,            !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     Refrigerator,             !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     84.3881856540084,         !- Design Level
@@ -3340,7 +3340,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     clotheswasher1,           !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     ClothesWasher_equip_sch,    !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     12.693246541904,          !- Design Level
@@ -3353,7 +3353,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     electric_dryer1,          !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     ClothesDryer,             !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     213.064557285022,         !- Design Level
@@ -3366,7 +3366,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     electric_range1,          !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     CookingRange,             !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     248.154224774405,         !- Design Level
@@ -3379,7 +3379,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     television1,              !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     InteriorLighting,         !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     0,                        !- Design Level
@@ -3392,7 +3392,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     electric_mels1,           !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     MiscPlugLoad,             !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     567.464237516869,         !- Design Level
@@ -3405,7 +3405,7 @@ ElectricEquipment,
 
 ElectricEquipment,
     IECC_Adj1,                !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     MiscPlugLoad,             !- Schedule Name
     EquipmentLevel,           !- Design Level Calculation Method
     340.847218482321,         !- Design Level
@@ -3418,7 +3418,7 @@ ElectricEquipment,
 
 ZoneVentilation:DesignFlowRate,
     Ventilation_unit1,        !- Name
-    living_unit1,             !- Zone or ZoneList or Space or SpaceList Name
+    livingunit,             !- Zone or ZoneList or Space or SpaceList Name
     always_avail,             !- Schedule Name
     Flow/Zone,                !- Design Flow Rate Calculation Method
     0,                        !- Design Flow Rate
@@ -3463,7 +3463,7 @@ AirflowNetwork:SimulationControl,
     ;                         !- Do Distribution Duct Sizing Calculation
 
 AirflowNetwork:MultiZone:Zone,
-    living_unit1,             !- Zone Name
+    livingunit,             !- Zone Name
     NoVent,                   !- Ventilation Control Mode
     ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     0,                        !- Minimum Venting Open Factor
@@ -4005,24 +4005,24 @@ AirflowNetwork:Distribution:Linkage,
     ZoneSupplyNode_unit1,     !- Node 1 Name
     ZoneSupplyRegisterNode_unit1 ATInlet,    !- Node 2 Name
     ZoneSupply2_unit1,        !- Component Name
-    living_unit1;             !- Thermal Zone Name
+    livingunit;             !- Thermal Zone Name
 
 AirflowNetwork:Distribution:Linkage,
     ZoneSupplyLink2_unit1 ATInlet,    !- Name
     ZoneSupplyRegisterNode_unit1 ATInlet,    !- Node 1 Name
     ZoneSupplyRegisterNode_unit1,    !- Node 2 Name
     ZoneSupplyLink2_unit1 ATInlet Duct,    !- Component Name
-    living_unit1;             !- Thermal Zone Name
+    livingunit;             !- Thermal Zone Name
 
 AirflowNetwork:Distribution:Linkage,
     ZoneSupplyConnectionLink_unit1,    !- Name
     ZoneSupplyRegisterNode_unit1,    !- Node 1 Name
-    living_unit1,             !- Node 2 Name
+    livingunit,             !- Node 2 Name
     ZoneConnectionDuct_unit1;    !- Component Name
 
 AirflowNetwork:Distribution:Linkage,
     ZoneReturnConnectionLink_unit1,    !- Name
-    living_unit1,             !- Node 1 Name
+    livingunit,             !- Node 1 Name
     ZoneOutletNode_unit1,     !- Node 2 Name
     ZoneConnectionDuct_unit1;    !- Component Name
 
@@ -4031,7 +4031,7 @@ AirflowNetwork:Distribution:Linkage,
     Zoneoutletnode_unit1,     !- Node 1 Name
     ZoneReturnNode_unit1,     !- Node 2 Name
     ZoneReturn1_unit1,        !- Component Name
-    living_unit1;             !- Thermal Zone Name
+    livingunit;             !- Thermal Zone Name
 
 AirflowNetwork:Distribution:Linkage,
     ZoneReturnLink2_unit1,    !- Name
@@ -4092,12 +4092,12 @@ AirflowNetwork:Distribution:Linkage,
 AirflowNetwork:Distribution:Linkage,
     ZoneSupplyLeakLink2_unit1,    !- Name
     ZoneSupplyRegisterNode_unit1 ATInlet,    !- Node 1 Name
-    living_unit1,             !- Node 2 Name
+    livingunit,             !- Node 2 Name
     SupplyLeak2;              !- Component Name
 
 AirflowNetwork:Distribution:Linkage,
     ZoneReturnLeakLink_unit1,    !- Name
-    living_unit1,             !- Node 1 Name
+    livingunit,             !- Node 1 Name
     ZoneReturnNode_unit1,     !- Node 2 Name
     ReturnLeak1;              !- Component Name
 
@@ -4122,14 +4122,14 @@ Exterior:Lights,
     Garage-Lights;            !- EndUse Subcategory
 
 DesignSpecification:OutdoorAir,
-    SZ_DSOA_living_unit1,     !- Name
+    SZ_DSOA_livingunit,     !- Name
     Flow/Zone,                !- Outdoor Air Method
     0,                        !- Outdoor Air Flow per Person
     ,                         !- Outdoor Air Flow per Zone Floor Area
     0.0283168464628752;       !- Outdoor Air Flow per Zone
 
 Sizing:Zone,
-    living_unit1,             !- Zone or ZoneList Name
+    livingunit,             !- Zone or ZoneList Name
     SupplyAirTemperature,     !- Zone Cooling Design Supply Air Temperature Input Method
     12,                       !- Zone Cooling Design Supply Air Temperature
     ,                         !- Zone Cooling Design Supply Air Temperature Difference
@@ -4138,7 +4138,7 @@ Sizing:Zone,
     ,                         !- Zone Heating Design Supply Air Temperature Difference
     0.0075,                   !- Zone Cooling Design Supply Air Humidity Ratio
     0.008,                    !- Zone Heating Design Supply Air Humidity Ratio
-    SZ_DSOA_living_unit1,     !- Design Specification Outdoor Air Object Name
+    SZ_DSOA_livingunit,     !- Design Specification Outdoor Air Object Name
     ,                         !- Zone Heating Sizing Factor
     ,                         !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
@@ -4211,7 +4211,7 @@ Sizing:Plant,
 
 ZoneControl:Thermostat,
     Zone Thermostat_unit1,    !- Name
-    living_unit1,             !- Zone or ZoneList Name
+    livingunit,             !- Zone or ZoneList Name
     zone_control_type,        !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
     thermostat_living Dual SP Control;    !- Control 1 Name
@@ -4264,7 +4264,7 @@ ZoneHVAC:EquipmentList,
     2;                        !- Zone Equipment 3 Heating or NoLoad Sequence
 
 ZoneHVAC:EquipmentConnections,
-    living_unit1,             !- Zone Name
+    livingunit,             !- Zone Name
     ZoneEquipment_unit1,      !- Zone Conditioning Equipment List Name
     zone inlet nodes_unit1,    !- Zone Air Inlet Node or NodeList Name
     Zone Exhaust Node_list_unit1,    !- Zone Air Exhaust Node or NodeList Name
@@ -4438,7 +4438,7 @@ AirLoopHVAC:UnitaryHeatPump:AirToAir,
     autosize,                 !- Cooling Supply Air Flow Rate
     autosize,                 !- Heating Supply Air Flow Rate
     0,                        !- No Load Supply Air Flow Rate
-    living_unit1,             !- Controlling Zone or Thermostat Location
+    livingunit,             !- Controlling Zone or Thermostat Location
     Fan:OnOff,                !- Supply Air Fan Object Type
     Supply Fan_unit1,         !- Supply Air Fan Name
     Coil:Heating:DX:SingleSpeed,    !- Heating Coil Object Type
@@ -4667,7 +4667,7 @@ Pipe:Indoor,
     DHW Demand Inlet Node_unit1,    !- Fluid Inlet Node Name
     DHW Demand Inlet Pipe Outlet Node_unit1,    !- Fluid Outlet Node Name
     ZONE,                     !- Environment Type
-    living_unit1,             !- Ambient Temperature Zone Name
+    livingunit,             !- Ambient Temperature Zone Name
     ,                         !- Ambient Temperature Schedule Name
     ,                         !- Ambient Air Velocity Schedule Name
     0.02,                     !- Pipe Inside Diameter
@@ -4679,7 +4679,7 @@ Pipe:Indoor,
     DHW Supply Outlet Pipe Inlet Node_unit1,    !- Fluid Inlet Node Name
     DHW Supply Outlet Node_unit1,    !- Fluid Outlet Node Name
     ZONE,                     !- Environment Type
-    living_unit1,             !- Ambient Temperature Zone Name
+    livingunit,             !- Ambient Temperature Zone Name
     ,                         !- Ambient Temperature Schedule Name
     ,                         !- Ambient Air Velocity Schedule Name
     0.02,                     !- Pipe Inside Diameter
@@ -4779,7 +4779,7 @@ WaterHeater:HeatPump:WrappedCondenser,
     HPPlantFanAirOutletNode_unit1,    !- Exhaust Air Node Name
     ,                         !- Inlet Air Temperature Schedule Name
     ,                         !- Inlet Air Humidity Schedule Name
-    living_unit1,             !- Inlet Air Zone Name
+    livingunit,             !- Inlet Air Zone Name
     WaterHeater:Stratified,    !- Tank Object Type
     Water Heater_Tank_unit1,    !- Tank Name
     Water Heater use inlet node_unit1,    !- Tank Use Side Inlet Node Name
@@ -5969,7 +5969,7 @@ BuildingSurface:Detailed,
   Inter zone floor 1,                                      !- Name
   Floor,                                                   !- Surface Type
   Interior Floor,                                          !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Adiabatic,                                               !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -5994,7 +5994,7 @@ BuildingSurface:Detailed,
   ceiling_unit1,                                           !- Name
   Ceiling,                                                 !- Surface Type
   Interior Ceiling,                                        !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Zone,                                                    !- Outside Boundary Condition
   attic_unit1,                                             !- Outside Boundary Condition Object
@@ -6113,7 +6113,7 @@ BuildingSurface:Detailed,
   Wall_ldf_1.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6138,7 +6138,7 @@ BuildingSurface:Detailed,
   Wall_sdr_1.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6163,7 +6163,7 @@ BuildingSurface:Detailed,
   Wall_ldb_1.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6188,7 +6188,7 @@ BuildingSurface:Detailed,
   Wall_sdl_1.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6263,7 +6263,7 @@ BuildingSurface:Detailed,
   Wall_ldb_1.garage1,                                      !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Zone,                                                    !- Outside Boundary Condition
   garage1,                                                 !- Outside Boundary Condition Object
@@ -6407,7 +6407,7 @@ BuildingSurface:Detailed,
   Wall_ldf_2.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6432,7 +6432,7 @@ BuildingSurface:Detailed,
   Wall_sdr_2.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6457,7 +6457,7 @@ BuildingSurface:Detailed,
   Wall_ldb_2.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6482,7 +6482,7 @@ BuildingSurface:Detailed,
   Wall_sdl_2.unit1,                                        !- Name
   Wall,                                                    !- Surface Type
   Exterior Wall,                                           !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   Outdoors,                                                !- Outside Boundary Condition
   ,                                                        !- Outside Boundary Condition Object
@@ -6507,7 +6507,7 @@ BuildingSurface:Detailed,
   Floor_unit1,                                             !- Name
   Floor,                                                   !- Surface Type
   Interior Floor,                                          !- Construction Name
-  living_unit1,                                            !- Zone Name
+  livingunit,                                            !- Zone Name
   ,                                                        !- Space Name
   OtherSideCoefficients,                                   !- Outside Boundary Condition
   surfPropOthSdCoefSlabAverage,                            !- Outside Boundary Condition Object

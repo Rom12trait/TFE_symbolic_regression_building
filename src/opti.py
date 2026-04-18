@@ -17,11 +17,9 @@ from zoneinfo import ZoneInfo
 
 class EnergyPlusSimulator:
     """
-    Class to simulate a building with EnergyPlus using the API. It gathers
-all
-        the functions necessary to run and store the variables as
-attributes
-        which avoids the use of global variables.
+    Class to simulate a building with EnergyPlus using the API. It gathers all
+    the functions necessary to run and store the variables as attributes
+    which avoids the use of global variables.
     :param api: the EnergyPlus API
     :param state: the state of the API (an integer)
     :param container: a list to store the variables during the simulation
@@ -249,17 +247,19 @@ Energy+
             for i, z in enumerate(self.buildingmodel.conditioned_zone_assets):
     # Temperature to impose = expected temperature if current time
     # is surrounded by expected results
+                #print(f"DEBUG: crt_datetime tz: {crt_datetime.tzinfo}")
+                #print(f"DEBUG: index tz: {z.expected_results.index.tz}")
                 if any(dt <= crt_datetime for dt in z.expected_results.index) and any(dt >= crt_datetime for dt in
                     z.expected_results.index):
                     # linear interpolation to get the temperature setpoint
-                    setpoint = df_linear_interp(z.expected_results,("t_in", np.nan), crt_datetime)
+                    setpoint = df_linear_interp(z.expected_results,"Tin", crt_datetime) # ("Tin", np.nan)
                     Tmin = setpoint - 0.05
                     Tmax = setpoint + 0.05
                     # else, temperature setpoints are set to historical temperature
                 else:
                 # linear interpolation to get the temperature setpoint
                     setpoint = df_linear_interp(
-                        self.buildingmodel.simulation, f"Zone Mean Air Temperature,{z.name}", crt_datetime)
+                        self.buildingmodel.simulation, f"{z.name.upper()}:Zone Air Temperature [C](TimeStep)", crt_datetime) # {z.name.upper()}LIVING_UNIT1:Zone Air Temperature [C](TimeStep)
                     Tmin = setpoint - 0.05
                     Tmax = setpoint + 0.05
 
@@ -423,7 +423,23 @@ setpoints
         setpoints are to be evaluated
     :return: the temperature setpoints at datetime
     """
+    # 1. On s'assure que query_time est naïf
+    if query_time.tzinfo is not None:
+        query_time = query_time.replace(tzinfo=None)
+
+    # 2. On s'assure que l'index du DataFrame est naïf
+    if df.index.tz is not None:
+        df_index_naive = df.index.tz_localize(None)
+    else:
+        df_index_naive = df.index
+
+    # 3. On recalcule les secondes avec les versions naïves
+    seconds = (df_index_naive - df_index_naive[0]).total_seconds()
+    query_seconds = (query_time - df_index_naive[0]).total_seconds()
+
+    # 4. On fait l'interpolation
+    return np.interp(query_seconds, seconds, df[col_name])
     # compute the number of seconds since start
-    seconds = (df.index - df.index[0]).total_seconds()
+    #seconds = (df.index - df.index[0]).total_seconds()
     # linear interpolation
-    return np.interp((query_time - df.index[0]).total_seconds(), seconds, df[col_name])
+    #return np.interp((query_time - df.index[0]).total_seconds(), seconds, df[col_name])

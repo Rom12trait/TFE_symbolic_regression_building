@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+from eppy.modeleditor import IDF
 
 class BuildingModel:
     """
@@ -69,25 +70,26 @@ class BuildingModel:
         self.fullsimulation = None
         self.simulation = None
         self.simulationvariables = [
-    "OutputVariable,Zone Mean Air Temperature,LIVING_UNIT1",
+    "OutputVariable,Zone Air Temperature,livingunit",
     "OutputVariable,Site Outdoor Air Drybulb Temperature,ENVIRONMENT",
-    "OutputVariable,Zone Air System Sensible Heating Rate,LIVING_UNIT1",
-    "OutputVariable,Zone Air System Sensible Cooling Rate,LIVING_UNIT1",
-    "OutputMeter,Electricity:Facility",
+    "OutputVariable,Zone Air System Sensible Heating Rate,livingunit",
+    "OutputVariable,Zone Air System Sensible Cooling Rate,livingunit",
     "OutputMeter,Electricity:Building",
     "OutputMeter,Electricity:HVAC",
     "OutputMeter,Heating:Electricity",
     "OutputMeter,Cooling:Electricity",
     "OutputMeter,Fans:Electricity",
-    #"OutputVariable,Zone Thermostat Heating Setpoint Temperature,living_unit1",
-    "OutputVariable,Zone Thermostat Cooling Setpoint Temperature,living_unit1"
+    "OutputVariable,Zone Thermostat Heating Setpoint Temperature,livingunit",
+    "OutputVariable,Zone Thermostat Cooling Setpoint Temperature,livingunit",
+    "Actuator,Zone Temperature Control,Heating Setpoint,LIVINGUNIT",
+    "Actuator,Zone Temperature Control,Cooling Setpoint,LIVINGUNIT"
 
     #"Actuator,Schedule:Constant,Schedule Value,heating_sch", # Nom de ton schedule chauffage
     #"Actuator,Schedule:Constant,Schedule Value,cooling_sch"  # Nom de ton schedule clim
 ]
         self.useless_variables = None
-        self.simulationfrequency = None
-        self.desiredfrequency = None
+        self.simulationfrequency = 4
+        self.desiredfrequency = 4
         self.nb_warmupts = None
 
         # ex-post simulation
@@ -308,8 +310,7 @@ list)
         """
         with pd.HDFStore(filepath_hdf, 'r') as store:
             self.simulation = pd.read_hdf(store, key="/df", mode="r")
-        self.simulation.index = pd.DatetimeIndex(self.simulation.index,
-tz=tz)
+        self.simulation.index = pd.DatetimeIndex(self.simulation.index,tz=tz)
 
     def set_nondispatchable_load(self, load: pd.Series):
         """
@@ -396,8 +397,372 @@ simulation.index).
             z.set_occupancy_weights(yearly_occ[z.name])
 
 
+class MediumOffice(BuildingModel):
+    def __init__(self, tp: str, name: str = "MediumOffice"):
+        """
+        tp is a string indicating the time period of the weather file. The
+        output folder will be named output_{tp}.
+        Parameters
+        ----------
+        tp
+        """
+        # PATHS
+        # path to the output directory
+        # path the file of the EnergyPlus model
+        # path to the weather file
+        # path to the adjacency matrix
+        #adjacency_matrix_path = folderpath / "zone_adjacency_matrix.csv"
+        idf_path = "dataset/ModeleHabitation/anneeClassique/model_annee_classique_exp.idf"
+        epw_path =  "dataset/Meteo/Brussels.Natl.AP_BEL.epw"
+        output_folderpath = "opti/bat"
+
+        # 1. Définition des 3 zones de ton IDF
+        zone_data = {
+            'zone': ['LIVINGUNIT', 'ATTIC_UNIT1', 'GARAGE1'],
+            'floor': [0, 1, 0],  # Étages indicatifs
+            'acu': ['ZONEDIRECTAIR_UNIT1 ADU', None, None]  # Seul LIVING_UNIT1 est piloté
+        }
+
+        zone_floor_acu = pd.DataFrame(zone_data)
+        adjacency_matrix = None
+        #Create building object
+        super().__init__(idf_path, epw_path, output_folderpath,
+                         zone_floor_acu, adjacency_matrix)
+        self._name = name
+        self.timeperiod = tp
+        self.acu_capacity = pd.Series(index=self.acus["acu"], dtype=float)
 
 
+    @property
+    def name(self):
+        return self._name
+
+    def get_variable_list(self):
+        # the variables without the zone name
+        variables = [
+            "OutputVariable,Site Outdoor Air Drybulb Temperature, ENVIRONMENT",
+            "OutputVariable,Site Outdoor Air Wetbulb Temperature, ENVIRONMENT",
+            "OutputVariable,Site Outdoor Air Relative Humidity, ENVIRONMENT",
+            "OutputVariable,Site Direct Solar Radiation Rate per"
+            " Area,ENVIRONMENT",
+            "OutputVariable,Site Diffuse Solar Radiation "
+            "Rate per Area,ENVIRONMENT",
+            "OutputVariable,Site Wind Speed,ENVIRONMENT",
+            "OutputMeter,Electricity:Facility",
+            "OutputMeter,Electricity:Building",
+            "OutputMeter,Electricity:HVAC",
+            "OutputMeter,Heating:Electricity",
+            "OutputMeter,Heating:NaturalGas",
+            "OutputMeter,Cooling:Electricity",
+        ]
+
+        # the variables with the zone name
+        for _, z in self.zones_df.iterrows():
+            n = z["name"]
+            if True:  # "_bot" in n or "First" in n:
+                variables.extend([
+                    # f"OutputVariable,Zone Air Relative Humidity,{n}",
+                    f"OutputVariable,Zone Air Temperature,{n}",
+                    f"OutputVariable,Zone Thermostat Cooling Setpoint "
+                    f"Temperature,{n}",
+                    f"OutputVariable,Zone Thermostat Heating Setpoint "
+                    f"Temperature,{n}",
+                    # The heating and cooling rate that reach the zone
+                    f"OutputVariable,Zone Air System Sensible Heating"
+                    f" Rate,{n}",
+                    f"OutputVariable,Zone Air System Sensible Cooling"
+                    f" Rate,{n}",
+                    # Cooling:EnergyTransfer
+                    # = Zone Air System Sensible Cooling Rate
+                    # f"OutputMeter,Cooling:EnergyTransfer:Zone:{n}",
+                    # Heating:EnergyTransfer
+                    # = Zone Air System Sensible Heating Rate
+                    # f"OutputMeter,Heating:EnergyTransfer:Zone:{n}",
+                    #f"InternalVariable,Zone Air Volume,{n}",
+                ])
+                if z["is_conditioned"]:
+                    variables.extend([
+                        f"OutputMeter,Electricity:Zone:{n}",
+                        # Heating Energy and Heating Rate of the heating coil
+                        # are the same for 1h ts
+                        # And Heating Energy and Electricity Energy are equal
+
+                        # The heating rate of the reheat coil for each zone
+                        f"OutputVariable,Heating Coil Heating Rate,{n} "
+                        f"VAV BOX REHEAT COIL",
+                        # The electricity of the reheat coil for each zone
+                        f"OutputVariable,Heating Coil Electricity Energy, {n} "
+                        f"VAV BOX REHEAT COIL",
+
+                    # f"OutputVariable,Zone Mechanical Ventilation "
+                    # f"No Load Heat Removal Energy,{n}",
+                    # f"OutputVariable,Zone Mechanical Ventilation "
+                    # f"Cooling Load Increase Energy,{n}",
+                    # f"OutputVariable,Zone Mechanical Ventilation "
+                    # f"Cooling Load Increase Due to "
+                    # f"Overheating Energy,{n}",
+                    # f"OutputVariable,Zone Mechanical Ventilation "
+                        # f"Cooling Load Decrease Energy,{n}",
+                        # f"OutputVariable,Zone Mechanical Ventilation "
+                        # f"No Load Heat Addition Energy,{n}",
+                        # f"OutputVariable,Zone Mechanical Ventilation "
+                        # f"Heating Load Increase Energy,{n}",
+                        # f"OutputVariable,Zone Mechanical Ventilation "
+                        # f"Heating Load Increase Due to "
+                        # f"Overcooling Energy,{n}",
+                        # f"OutputVariable,Zone Mechanical Ventilation "
+                        # f"Heating Load Decrease Energy,{n}",
+                        # f"OutputVariable,Zone Mechanical Ventilation Air"
+                        # f"Changes per Hour,{n}", 
+                        f"OutputVariable,Zone Mechanical Ventilation Mass "
+                        f"Flow Rate,{n}",
+                        #
+                        # Occupancy: both variable are the same
+                        f"OutputVariable,People Occupant Count,{n}",
+                        # f"OutputVariable,Zone People Occupant Count,{n}",
+                    ])
+
+                    for a in self.acus["acu"]:
+                        variables.extend([
+                            f"OutputVariable,Heating Coil Heating Energy,"
+                            f"{a} HEATING COIL",
+                            f"OutputVariable,Heating Coil Electricity Energy,"
+                            f"{a} HEATING COIL",
+                            f"OutputVariable,Cooling Coil Total Cooling Energy,{a} "
+                            f"COOLING COIL",
+                            f"OutputVariable,Cooling Coil Sensible Cooling Energy,{a} "
+                            f"COOLING COIL",
+                            f"OutputVariable,Cooling Coil Electricity Energy,"
+                            f"{a} COOLING COIL",
+                            f"OutputVariable,Air System Electricity Energy,{a}",
+
+                            f"OutputVariable,Air System Hot Water Energy,{a}",
+                            f"OutputVariable,Air System Steam Energy,{a}",
+                            f"OutputVariable,Air System Chilled Water Energy,{a}",
+                            f"OutputVariable,Air System Electricity Energy,{a}",
+                            # Air System NaturalGas Energy is similar to
+                            # Air System Heating Coil NaturalGas Energy
+                            f"OutputVariable,Air System NaturalGas Energy,{a}",
+                            f"OutputVariable,Air System Water Volume,{a}",
+                            f"OutputVariable,Air System Cooling Coil Total "
+                            f"Cooling Energy,{a}",
+                            # Air System Heating Coil Total Heating Energy is similar to
+                            # Air System Heating Coil Electric
+                            # + 0.81 * Air System Heating Coil NaturalGas Energy
+                            f"OutputVariable,Air System Heating Coil Total "
+                            f"Heating Energy,{a}",
+                            f"OutputVariable,Air System Heating Coil Electricity "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System Heat Exchanger Total "
+                            f"Heating Energy,{a}",
+                            f"OutputVariable,Air System Heat Exchanger Total "
+                            f"Cooling Energy,{a}",
+                            f"OutputVariable,Air System Humidifier Total "
+                            f"Heating Energy,{a}",
+                            f"OutputVariable,Air System Evaporative Cooler Total "
+                            f"Cooling Energy,{a}",
+                            f"OutputVariable,Air System Desiccant Dehumidifier Total "
+                            f"Cooling Energy,{a}",
+                            # Fan Electricity Energy is similar to
+                            # Air System Fan Electricity Energy
+                            f"OutputVariable,Air System Fan Electricity "
+                            f"Energy,{a}",
+                            # f"OutputVariable,Air System Fan Air Heating Energy,{a}",
+                            f"OutputVariable,Air System Heating Coil Hot Water "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System Cooling Coil Chilled Water "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System DX Heating Coil Electricity "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System DX Cooling Coil Electricity "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System Heating Coil NaturalGas "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System Heating Coil Steam "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System Humidifier Electricity "
+                            f"Energy,{a}",
+                            f"OutputVariable,Air System Evaporative Cooler "
+                            f"Electricity Energy,{a}",
+                            f"OutputVariable,Air System Desiccant Dehumidifier "
+                            f"Electricity Energy,{a}",
+                            f"OutputVariable,Air System Outdoor Air Mass Flow Rate, {a}",
+                            f"InternalVariable,Intermediate Air System Main Supply "
+                            f"Volume Flow Rate,{a}"])
+
+                        return variables
+
+    def zonal_acu_electricity_energy(self, df):
+        """
+        Compute the electrical consumption of the PACU associated to each zone.
+        :param df: the dataframe containing the simulation results which
+            needs to be enriched with the
+            "Zone PACU Electricity Energy,{z['name']}" columns.
+            E.g., df = bldg.simulation or bldg.simulation_expost
+        :return: the enriched df
+        """
+        acu_group = self.conditioned_zones_df.groupby("acu")
+        ttl_zone_vent = pd.DataFrame(columns=self.acus['acu'],
+                                     index=df.index,
+                                     dtype=float)
+        for acu, g in acu_group:
+            zone_mech_names = [
+                f'Zone Mechanical Ventilation Mass Flow Rate,{z["name"]}'
+                for
+                _, z in g.iterrows()]
+            ttl_zone_vent[acu] = df.loc[:, zone_mech_names].sum(axis=1)
+
+            # To avoid fragmenting the dataframe, we store the new columns in
+        # a temporary dataframe then we concatenate it
+        tmp_df = pd.DataFrame(index=df.index, columns=[
+            f"Zone PACU Electricity Energy,{zn}[Wh]" for zn in
+            self.zone_names], dtype=float)
+        for i, z in self.conditioned_zones_df.iterrows():
+            PACU_energy_col = f"Zone PACU Electricity Energy, {z['name']}[Wh]"
+
+            ventilation_col = (f"Zone Mechanical Ventilation Mass Flow Rate,"
+                               f"{z['name']}")
+            cooling_energy_col = (f"Air System DX Cooling Coil Electricity" 
+                                  f"Energy,{z['acu']}[Wh]")
+            gas_energy_col = f"Air System NaturalGas Energy,{z['acu']}[Wh]"
+            fan_energy_col = (f"Air System Fan Electricity Energy,"
+                              f"{z['acu']}[Wh]")
+            zone_htg_energy_col = (f"Heating Coil Electricity Energy,"
+                                   f"{z['name']} VAV BOX REHEAT COIL[Wh]")
+
+            tmp_df[PACU_energy_col] = (
+                    df[zone_htg_energy_col] +
+                    (df[ventilation_col] / ttl_zone_vent[z['acu']]).fillna(0)
+                    * (df[cooling_energy_col] + 0.8 * df[gas_energy_col]
+                       + df[fan_energy_col])
+            )
+            # for the non-conditioned zones, the PACU energy is 0
+
+
+        tmp_df.fillna(0, inplace=True)
+        df = pd.concat([df, tmp_df], axis=1)
+
+        return df
+
+
+    def compute_acu_capacity(self):
+        """
+        Compute the capacity for each ACU in kW
+        """
+        acu_group = self.conditioned_zones_df.groupby("acu")
+        for acu, df in acu_group:
+            freq = self.simulation.index.freq.nanos / 3.6e12  # in hours
+            self.acu_capacity[acu] = self.simulation.loc[:, f"Air System Electricity Energy, {acu}[Wh]"].div(1000*freq).max()
+
+
+    def load_simulation(self, filepath_hdf=None, tz: str = "UTC"):
+        """
+        load the simulation and compute the PACU capacities
+        :return:
+        """
+        if filepath_hdf is None:
+            filepath_hdf = self.output_folderpath / "datasets" / "training.h5"
+        super().load_simulation(filepath_hdf, tz)
+        self.compute_acu_capacity()
+
+
+    def set_nondispatchable_load(self, load: pd.Series = None):
+        """
+        Set the non-dispatchable load of the building
+        Parameters
+        ----------
+        load: pd.Series
+            The non-dispatchable load in kWh with time index.
+        """
+        if load is None:
+            load = self.simulation["Electricity:Building[Wh]"] / 1000
+            load.name = load.name.replace("[Wh]", "[kWh]")
+        super().set_nondispatchable_load(load)
+
+
+    def set_zone_hvac(self, T0: pd.Timestamp, Ttgt: pd.DataFrame = None):
+        """
+            Set the HVAC parameters for each zone in the building
+            Parameters
+            ----------
+            T0: pd.Timestamp
+                The initial time of the simulation
+            Ttgt: pd.DataFrame
+                The target temperatures for each zone. The columns are the zone
+                names and the index is the time index.
+            """
+        if Ttgt is None:
+            Ttgt = pd.DataFrame(22, index=self.simulation.index,
+                                    columns=self.conditioned_zone_names)
+        super().set_zone_hvac(T0, Ttgt)
+
+    def set_zone_occupancy_weight(self):
+        """
+        Set the occupancy weights for each zone in the building.
+        Load it from the simulation and avoid zero.
+        """
+        yearly_occ = self.simulation.filter(like='Occupant Count')
+        yearly_occ.columns = [col.split(',')[-1] for col in
+                              yearly_occ.columns]
+        yearly_occ_w = yearly_occ / yearly_occ.max().max()
+        # yearly_occ_w = yearly_occ_w.replace(0, 0.001)
+        for z in self.conditioned_zone_assets:
+            z.set_occupancy_weights(yearly_occ_w[z.name])
+
+    def modify_idf(self, T0, idd_filepath=None, random=False, np_rng=None):
+        """
+        Modify the IDF file.
+        :param idf_filepath: idf file path, the building model input data file
+        :param idd_filepath: the file to the EnergyPlus Input Data Dictionary.
+            Must be adapted to the version of EnergyPlus.
+        :param T0: a pd.Timestamp object representing the day of interest
+        :param random: if True, add some randomness to the schedules of
+            occupancy and equipment use to make the simulation more realistic
+        :param np_rng: a numpy random generator to add some randomness to the
+            schedules of occupancy and equipment use
+        :return:
+        """
+        idf_filepath = self.idf_filepath
+        if idd_filepath == None:
+            energyplus_folderpath = Path(sys.path[0])
+            idd_filepath = energyplus_folderpath / "Energy+.idd"
+
+        IDF.setiddname(idd_filepath)
+        idf = IDF(idf_filepath)
+        runperiod = idf.idfobjects["RunPeriod"][0]
+        # Modify IDF file to run only the day of interest and some specific
+        # days because, E+ runs from 01:00 to 24:00
+        # but also to have the building dynamic correct.
+        startday = T0 - pd.Timedelta(days=5)
+        runperiod.Begin_Month = startday.month
+        runperiod.Begin_Day_of_Month = startday.day
+        runperiod.End_Month = T0.month
+        runperiod.End_Day_of_Month = T0.day
+        # print(runperiod)
+        # make sure warm-up days are numerous enough for good computation
+        bldg = idf.idfobjects["Building"][0]
+        nb_warmup_days = 10
+        bldg.Maximum_Number_of_Warmup_Days = nb_warmup_days
+        bldg.Minimum_Number_of_Warmup_Days = nb_warmup_days
+        # Set the tolerance for the unmet setpoints
+        if len(idf.idfobjects["OutputControl:ReportingTolerances"]) == 0:
+            # On crée l'objet s'il n'existe pas
+            tolerance_unmet_stpt = idf.newidfobject("OutputControl:ReportingTolerances")
+        else:
+            tolerance_unmet_stpt = idf.idfobjects["OutputControl:ReportingTolerances"][0]
+        tolerance_unmet_stpt = idf.idfobjects["OutputControl:ReportingTolerances"][0]
+        tolerance_unmet_stpt.Tolerance_for_Time_Heating_Setpoint_Not_Met = 0.1
+        tolerance_unmet_stpt.Tolerance_for_Time_Cooling_Setpoint_Not_Met = 0.1
+        # Modify the HVAC schedule to be available all the time
+        # (but not modifying the Design Days)
+        # + Uncertainty on the occupancy and thus equipment use
+
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".idf",
+                                         delete=False
+                                         ) as tmpfile:
+            idf.saveas(tmpfile.name)
+
+        return Path(tmpfile.name)
 
 
 
@@ -487,7 +852,7 @@ kW
         self.controlled = zone_row["is_conditioned"]
         self.acu = zone_row["acu"]
         self.Tin0 = \
-            bldg.simulation[f"Zone Mean Air Temperature,{self.name}"].loc[
+            bldg.simulation[f"Zone Air Temperature,{self.name}"].loc[
                 initial_datetime]
         if self.controlled:
             self.Tmax = bldg.simulation[
@@ -510,7 +875,7 @@ kW
 
     def set_simulation_results(self, simulation: pd.DataFrame):
         self.simulation = simulation
-        self.Tin_sim = simulation[f"Zone Mean Air Temperature,{self.name}"]
+        self.Tin_sim = simulation[f"Zone Air Temperature,{self.name}"]
 
 
     @property

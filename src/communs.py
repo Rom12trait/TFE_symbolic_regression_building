@@ -14,9 +14,9 @@ def load_data(filepath):
     design_days =2*rows_per_day+1
     dict_newindex = {
         'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
-        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
-        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
-        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+        'LIVINGUNIT:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVINGUNIT:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVINGUNIT:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
     }
     df = pd.read_csv(filepath, sep=";", skiprows=range (1, design_days))
     #print(df.columns)
@@ -103,12 +103,12 @@ def load_data_opti_new(filepath, selected_days):
 
     dict_newindex = {
         'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
-        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
-        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
-        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+        'LIVINGUNIT:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVINGUNIT:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVINGUNIT:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
         'Fans:Electricity [J](TimeStep)': 'Pfans',
-        'LIVING_UNIT1:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
-        'LIVING_UNIT1:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
+        'LIVINGUNIT:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
+        'LIVINGUNIT:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
         'Heating:Electricity [J](TimeStep)': 'P_heating',
         'Cooling:Electricity [J](TimeStep)': 'P_cooling'
     }
@@ -157,6 +157,28 @@ def load_data_opti_new(filepath, selected_days):
             }
 
     return data_12_days, df
+
+def load_data_api(filepath):
+    rows_per_day = 96
+    design_days = 2 * rows_per_day + 1
+    # Chargement en sautant les jours de dimensionnement
+    df = pd.read_csv(filepath, sep=";", skiprows=range(1, design_days))
+    df.columns = df.columns.str.strip()
+
+    # 1. Traitement spécifique du format EnergyPlus
+    def fix_ep_datetime(row):
+        date_part = row['Date/Time'].strip()
+        if '24:00:00' in date_part:
+            # On remplace 24h par 00h et on ajoutera un jour après conversion
+            clean_date = date_part.replace('24:00:00', '00:00:00')
+            return pd.to_datetime("2017/" + clean_date, format="%Y/%m/%d %H:%M:%S") + pd.Timedelta(days=1)
+        else:
+            return pd.to_datetime("2017/" + date_part, format="%Y/%m/%d %H:%M:%S")
+
+    df['datetime'] = df.apply(fix_ep_datetime, axis=1)
+    df.set_index('datetime', inplace=True)
+    data_annual = df.sort_index()
+    return data_annual
 
 def calculate_average_efficiencies(df_annual):
 
