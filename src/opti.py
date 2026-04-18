@@ -14,7 +14,7 @@ import pandas as pd
 from src.building_model import BuildingModel
 from zoneinfo import ZoneInfo
 
-
+#class api
 class EnergyPlusSimulator:
     """
     Class to simulate a building with EnergyPlus using the API. It gathers all

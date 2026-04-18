@@ -6,6 +6,7 @@ import sys
 import tempfile
 from eppy.modeleditor import IDF
 
+#class batiment
 class BuildingModel:
     """
        BuildingModel is a class which contains the necessary information about an EnergyPlus existing model to simulate it.
