@@ -3,11 +3,9 @@ import pandas as pd
 import importlib
 import numpy as np
 from src import communs
-import matplotlib.pyplot as plt
 import pyomo.environ as pyo
 from datetime import datetime, timedelta
 import zoneinfo
-from src.communs import load_data_api
 importlib.reload(communs)
 from src.opti import EnergyPlusSimulator
 from src.building_model import BuildingModel, MediumOffice
@@ -15,10 +13,9 @@ from src.building_model import BuildingModel, MediumOffice
 selected_days, dict_days_prices, df_prix = communs.process_market_prices('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv', seed = 42)
 data_12days, data_annual = communs.load_data_opti_new(
     "dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv", selected_days)
-
+#opti/EPlus_run_20_24/model_annee_classique_20_24.csv
 # --- PARAMÈTRES PHYSIQUES ---
 eta_h, eta_c = communs.calculate_average_efficiencies(data_annual) #c= 3.73 h = 1.86
-
 
 def solve_hvac_optimization(day_str, prices_vector, Tout_vector, T_initial):
     """+ Pfans_vector[t]
@@ -159,107 +156,45 @@ for day in selected_days:
 Results = pd.DataFrame(results_all_days)
 data_days = pd.DataFrame(data_12days)
 df_summary = pd.DataFrame(summary_data)
+total_12_days = df_summary['Total_Cost_Euro'].sum()
+df_total_row = pd.DataFrame([{'Day': 'TOTAL 12 JOURS', 'Total_Cost_Euro': total_12_days}])
+
+# On concatène le résumé et la ligne de total
+df_summary = pd.concat([df_summary, df_total_row], ignore_index=True)
 print("\n--- RÉSUMÉ DES COÛTS PAR JOUR ---")
 print(df_summary)
-print(f"\nCoût total pour les 12 jours sélectionnés : {df_summary['Total_Cost_Euro'].sum():.2f} €")
 
-# --- 2. CRÉATION DU FICHIER EXCEL MULTI-FEUILLES ---
-
-def export_opti_results_to_excel(df_summary, results_all_days, output_path ="opti/Resultats_Optimisation_Detaille.xlsx"):
-    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
-        # Feuille 1 : Résumé global
-        df_summary.to_excel(writer, sheet_name='Resume_Couts', index=False)
-
-        # 12 Feuilles : Une par jour
-        for day, values in results_all_days.items():
-            # Préparation du DataFrame spécifique au jour (alignement 97 points)
-            # On ajoute NaN à la fin pour les données de flux (96 -> 97)
-            data_day = {
-                'Timestep': range(97),
-                'T_zone_[°C]': values['T_zone'],
-                'P_heating_[W]': values['P_heating'] + [np.nan],
-                'P_cooling_[W]': values['P_cooling'] + [np.nan],
-                'Prix_[EUR/kWh]': list(values['Prices']) + [np.nan],
-                'Cout_Instant_[EUR]': values['Step_Costs'] + [np.nan]
-            }
-
-            df_day = pd.DataFrame(data_day)
-
-            # On utilise la date comme nom de feuille (max 31 caractères pour Excel)
-            sheet_name = f"Day_{day}"
-            df_day.to_excel(writer, sheet_name=sheet_name, index=False)
-
-#export_opti_results_to_excel(df_summary, results_all_days)
-
-def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
-    """
-    Génère et sauvegarde les 3 graphiques pour un jour spécifique.
-    """
-
-    # Paramètres communs
-    res = results_all_days[day]
-    hours97 = np.linspace(0,24,97)
-    hours = np.linspace(0, 24, 96)
-    xticks = np.arange(0, 25, 2)
-    Ph_max, Pc_max = res['P_h_max'], res['P_c_max']
-    tmin, tmax = res['T_min'], res['T_max']
-
-    # --- 1. FIGURE TEMPÉRATURES ---
-    plt.figure()
-    plt.plot(hours97, res['T_zone'], color='blue', label=f"T_zone {day}", linewidth=2.5)
-    plt.axhline(y=tmin, color='green', linestyle='--', alpha=0.5, label=" T_min")
-    plt.axhline(y=tmax, color='red', linestyle='--', alpha=0.5, label="T_max")
-    plt.title(f"Analyse Thermique - {day}")
-    plt.ylabel("Température [°C]")
-    plt.xlabel("Heure [h]")
-    plt.xticks(xticks)
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.7)
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/Temp_Zone_{day}.png")
-    plt.close()  # Ferme la figure pour libérer la RAM
-
-    # --- 2. FIGURE PUISSANCES HVAC ---
-    plt.figure() #figsize=(10, 5)
-    p_net = np.array(res['P_heating']) - np.array(res['P_cooling'])
-    plt.step(hours, p_net, where='post', color='orange', label="P_net (heating > 0 et cooling < 0)", linewidth=2)
-    plt.axhline(y=Ph_max, color='red', linestyle='--', alpha=0.3, label="P_max Heat")
-    plt.axhline(y=-Pc_max, color='blue', linestyle='--', alpha=0.3, label="P_max Cool")
-    plt.title(f"Profil Puissance HVAC - {day}")
-    plt.ylabel("Puissance [W]")
-    plt.xlabel("Heure [h]")
-    plt.xticks(xticks)
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.7)
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/Puissance_HVAC_{day}.png")
-    plt.close()
-
-    # --- 3. FIGURE PRIX ET COÛTS ---
-    plt.figure()
-    p_tot = np.array(res['P_heating']) + np.array(res['P_cooling'])
-    step_costs = (res['Prices'] * p_tot / 1000 * 0.25)
-
-    plt.step(hours, res['Prices'], where='post', color='blue', linewidth=1.5, label="Prix marché [€/kWh]")
-    plt.step(hours, step_costs, where='post', color='black', alpha=0.7, linewidth=2, label="Coût [€/15min]")
-    plt.fill_between(hours, step_costs, step='post', color='black', alpha=0.1)
-
-    plt.title(f"Analyse Économique - {day}")
-    plt.ylabel("Valeur [€]")
-    plt.xlabel("Heure [h]")
-    plt.xticks(xticks)
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.7)
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/Prix_Couts_{day}.png")
-    plt.close()
-
-
+# --- CRÉATION DU FICHIER EXCEL MULTI-FEUILLES ---
+communs.export_opti_results_to_excel(df_summary, results_all_days, output_path ="opti/Resultats_Optimisation_1decision.xlsx")
+#%%
 # --- BOUCLE D'EXÉCUTION ---
 # On boucle sur tous les jours présents dans tes résultats (les 12 jours)
-#for day in results_all_days.keys():
- #   print(f"Génération des graphiques pour : {day}...")
-  #  save_plot_day(day, results_all_days)
+for day in results_all_days.keys():
+   print(f"Génération des graphiques pour : {day}...")
+   communs.save_plot_day(day, results_all_days, output_dir="opti/results_opti_1decision")
+
+
+#%%%
+#traitement données
+# --- BOUCLE D'ANALYSE ---
+all_stats_list = []
+all_df_days_dict = {}
+all_stats_list_sans_opti = []
+all_df_days_dict_sans_opti = {}
+for day in results_all_days.keys():
+    try:
+        stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days)
+        all_stats_list.append(stats)
+        all_df_days_dict[day] = df_cleaned
+        stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days)
+        all_stats_list_sans_opti.append(stats_sans_opti)
+        all_df_days_dict_sans_opti[day] = df_sans_opti
+        communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti)
+        print(f"{day} | Coût E+: {stats['Cost_Real']:.2f}€ vs Opti: {stats['Cost_Opti']:.2f}€")
+    except Exception as e:
+        print(f"Erreur sur {day}: {e}")
+communs.export_validation_to_excel(all_stats_list, all_df_days_dict)
+communs.export_validation_to_excel(all_stats_list_sans_opti, all_df_days_dict_sans_opti, output_path="opti/Validation_EPlus_sans_Opti.xlsx")
 
 #%%
 def prepare_for_api(day_str, t_zone_opt):
@@ -317,7 +252,4 @@ for day in selected_days:
 
         # 6. Sauvegarder les vrais résultats EnergyPlus
         df_final_api.to_csv(f"opti/bat/validation_EP_{day}.csv", sep=";")
-
-
-#%%traitement données
 
