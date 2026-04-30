@@ -2,7 +2,7 @@
 from src.function_rc import load_idf, slab_capacity, compute_h_wall, compute_h_vent, compute_slab_loss, compute_h_windows
 
 idf = load_idf(
-    "../dataset/modèle habitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
+    "../dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
 )
 

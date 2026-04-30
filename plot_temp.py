@@ -2,18 +2,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 # 1. Charger le fichier de consigne
-df_input = pd.read_csv('dataset/modèle habitation/consignes_hvac.csv', names=['Heating_Setpoint', 'Cooling_Setpoint'])
+df_input = pd.read_csv('dataset/ModeleHabitation/consignes_hvac.csv', names=['Heating_Setpoint', 'Cooling_Setpoint'])
 timestep = 15  # minutes
 rows_per_day = int(24 * 60 / timestep)  # 96
 design_days = 2 * rows_per_day + 1
 # 2. Charger le résultat d'EnergyPlus (celui qui sort du run)
-df_res = pd.read_csv('dataset/modèle habitation/model_annee_dynamique.csv', sep=";", skiprows=range (1, design_days))
+df_res = pd.read_csv('dataset/ModeleHabitation/model_annee_dynamique.csv', sep=";", skiprows=range (1, design_days))
 # Nettoyage des espaces dans les noms de colonnes
 df_res.columns = [c.strip() for c in df_res.columns]
 
 
-plt.figure(figsize=(15, 7))
-
+plt.figure()
 # Plot des consignes (Input)
 # Note : si votre simulation est au pas de 10min, il faut répéter les valeurs horaires
 plt.step(range(168), df_input['Heating_Setpoint'][:168], where='post',
@@ -44,6 +43,6 @@ plt.xlim(0, 168) # Une semaine complète
 jours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 for i, jour in enumerate(jours):
     plt.text(i*24 + 12, plt.ylim()[0], jour, horizontalalignment='center', fontweight='bold')
-
+plt.savefig('dynamique_thermique.pdf')
 plt.show()
 

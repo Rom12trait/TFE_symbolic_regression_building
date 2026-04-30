@@ -2,7 +2,7 @@
     "model_type": "PySRModel",
     "random_state": 42,
     "is_fitted": true,
-    "training_date": "2026-03-10 08:58:10",
+    "training_date": "2026-03-10 13:31:08",
     "adaptive_parsimony_scaling": 1040.0,
     "alpha": 3.17,
     "annealing": false,
@@ -99,7 +99,7 @@
     "weight_rotate_tree": 4.26,
     "weight_simplify": 0.00209,
     "weight_swap_operands": 0.198,
-    "equation": "(x2 * 3.184124e-5) + x0",
-    "complexity": 5,
-    "loss": 0.099043176
+    "equation": "((x2 + (x2 * ((x2 * x2) * -2.507223e-7))) * -4.2067688e-5) + x0",
+    "complexity": 13,
+    "loss": 0.09597089
 }

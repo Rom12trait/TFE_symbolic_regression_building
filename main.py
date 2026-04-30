@@ -9,6 +9,8 @@ importlib.reload(function_rc)
 from src.function_rc import RCmodel, load_idf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 from src.linear_model import LinearRegressionModel
 from src.pysr_model import PySRModel
 
@@ -205,4 +207,19 @@ communs.tolatex(runfile)
 
 
 
+#%%
+#non_linéarité
 
+poly = PolynomialFeatures(degree=2, include_bias=False)
+X_poly = poly.fit_transform(X)
+
+model_quad = LinearRegression()
+model_quad.fit(X_poly, y)
+
+#
+feature_names = poly.get_feature_names_out(['T', 'Text', 'Q'])
+coeffs = dict(zip(feature_names, model_quad.coef_))
+intercept = model_quad.intercept_
+
+print("Équation thermique identifiée :")
+print(f"T_k+1 = {intercept:.4f} + " + " + ".join([f"({v:.4e} * {k})" for k, v in coeffs.items()]))

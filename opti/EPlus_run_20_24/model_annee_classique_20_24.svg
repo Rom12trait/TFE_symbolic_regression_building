@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<svg width="250mm" height="200mm" viewBox="0 0 2500 1500"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:ev="http://www.w3.org/2001/xml-events">
+<g font-family="Verdana" font-size="8">
+  <text x="1" y="1">ERROR - COULD NOT COMPLETE DRAWING! Examine ERR file for possible explanation. Last error message is:   "Error: No node connection found after the following object: OAEXHAUSTFAN_UNIT1"</text>
+  <rect x="1700" y="20" width="200" height="20" style="fill:chartreuse; stroke: black;"/>1
+  <text x="1702" y="33">LIVING_UNIT1</text>
+  <rect x="450" y="20" width="200" height="20" style="fill:skyblue; stroke: black;"/>2
+  <text x="452" y="33">DX COOLING COIL_UNIT1</text>
+  <rect x="700" y="20" width="200" height="20" style="fill:salmon; stroke: black;"/>3
+  <text x="702" y="33">MAIN DX HEATING COIL_UNIT1</text>
+  <rect x="200" y="20" width="200" height="20" style="fill:silver; stroke: black;"/>9
+  <text x="202" y="33">SUPPLY FAN_UNIT1</text>
+  <rect x="200" y="100" width="1" height="1" style="fill:silver; stroke: black;"/>11
+  <text x="202" y="94">OAEXHAUSTFAN_UNIT1</text>
+  <rect x="1200" y="20" width="200" height="20" style="fill:wheat; stroke: black;"/>28
+  <text x="1202" y="33">ZONE SUPPLY AIR SPLITTER_UNIT1</text>
+  <rect x="200" y="100" width="1" height="1" style="fill:paleturquoise; stroke: black;"/>30
+  <text x="202" y="94">OA_HEAT_RECOVERY_UNIT1</text>
+  <rect x="1450" y="20" width="200" height="20" style="fill:snow; stroke: black;"/>31
+  <text x="1452" y="33">ZONEDIRECTAIR_UNIT1</text>
+  <rect x="1950" y="20" width="200" height="20" style="fill:wheat; stroke: black;"/>32
+  <text x="1952" y="33">ZONE RETURN AIR MIXER_UNIT1</text>
+  <rect x="950" y="20" width="200" height="20" style="fill:salmon; stroke: black;"/>33
+  <text x="952" y="33">SUPP HEATING COIL_UNIT1</text>
+  <line x1="650" y1="30" x2="700" y2="30" style="stroke:black;"/>
+  <line x1="900" y1="30" x2="950" y2="30" style="stroke:black;"/>
+  <line x1="400" y1="30" x2="450" y2="30" style="stroke:black;"/>
+  <line x1="1400" y1="30" x2="1450" y2="30" style="stroke:black;"/>
+  <line x1="201" y1="100" x2="200" y2="100" style="stroke:black;"/>
+  <line x1="1650" y1="30" x2="1700" y2="30" style="stroke:black;"/>
+  <line x1="1150" y1="30" x2="1200" y2="30" style="stroke:black;"/>
+  <line x1="1900" y1="30" x2="1950" y2="30" style="stroke:black;"/>
+  <text x="200" y="141">Unused Non-Parent Objects:</text>
+  <text x="220" y="161">HEAT PUMP WATER HEATER EVAPORATOR_UNIT1</text>
+  <text x="220" y="181">OutdoorAir:NodeList</text>
+  <text x="220" y="201">OutdoorAir:Node</text>
+  <text x="220" y="221">OutdoorAir:Node</text>
+  <text x="220" y="241">HEAT PUMP WATER HEATER EVAPORATOR_UNIT1</text>
+  <text x="220" y="261">OASUPPLYFAN_UNIT1</text>
+  <text x="220" y="281">HEAT PUMP WATER HEATER FAN_UNIT1</text>
+  <text x="220" y="301">WATER HEATER_TANK_UNIT1</text>
+  <text x="220" y="321">WATER HEATER_TANK_UNIT1</text>
+  <text x="220" y="341">DHW LOOP SETPOINT MANAGER_UNIT1</text>
+  <text x="220" y="361">DHW DEMAND INLET PIPE_UNIT1</text>
+  <text x="220" y="381">DHW SUPPLY OUTLET PIPE_UNIT1</text>
+  <text x="220" y="401">DHW SINKS_UNIT1</text>
+  <text x="220" y="421">DHW SHOWERS_UNIT1</text>
+  <text x="220" y="441">DHW CLOTHESWASHER_UNIT1</text>
+  <text x="220" y="461">DHW DISHWASHER_UNIT1</text>
+  <text x="220" y="481">DHW BATHS_UNIT1</text>
+  <text x="220" y="501">MAINS MAKEUP PIPE_UNIT1</text>
+  <text x="220" y="521">DHW DEMAND SPLITTER_UNIT1</text>
+  <text x="220" y="541">DHW DEMAND MIXER_UNIT1</text>
+  <text x="220" y="561">DHW SUPPLY SPLITTER_UNIT1</text>
+  <text x="220" y="581">DHW SUPPLY MIXER_UNIT1</text>
+  <text x="220" y="601">MAINS PRESSURE_UNIT1</text>
+  <text x="200" y="641">
+The following are not supported: objects related to controls or ZoneHVAC:IdealLoadsAirSystem</text>
+</g>
+</svg>

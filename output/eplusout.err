@@ -1,0 +1,12 @@
+Program Version,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.03.31 11:23,
+   ** Severe  ** GroundHeatTransfer:* objects found. These objects are not supported directly by EnergyPlus.
+   **   ~~~   ** You must run the ExpandObjects program on this input.
+   **  Fatal  ** Errors occurred on processing input file. Preceding condition(s) cause termination.
+   ...Summary of Errors that led to program termination:
+   ..... Reference severe error count=1
+   ..... Last severe error=GroundHeatTransfer:* objects found. These objects are not supported directly by EnergyPlus.
+   ************* Warning:  Node connection errors not checked - most system input has not been read (see previous warning).
+   ************* Fatal error -- final processing.  Program exited before simulations began.  See previous error messages.
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Terminated--Fatal Error Detected. 0 Warning; 1 Severe Errors; Elapsed Time=00hr 00min  0.13sec
