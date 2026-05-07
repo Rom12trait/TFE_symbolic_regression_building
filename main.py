@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 import importlib
 from src import communs, pysr_model, linear_model, function_rc
 importlib.reload(communs)
@@ -13,26 +14,23 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from src.linear_model import LinearRegressionModel
 from src.pysr_model import PySRModel
+import matplotlib.pyplot as plt
 
-
-runfile="TEST"
+runfile="NonLinear"
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
-
 #Charger les données
 #soit airport + brussel bel ensemble ou annee dyn
-df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
-df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-#df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv")
-#df_test = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique_brussel_bel.csv")
+#df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
+#df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
+df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv")
+df_test = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique_brussel_bel.csv")
 idf = load_idf(
     "dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
 )
-
 X = df[["Tzone", "Tout", "Qhvac"]].values
 y = df["Tzone_next"].values
-
 #X_test = df_test[["Tzone", "Tout", "Qhvac"]].values
 #y_test = df_test["Tzone_next"].values
 
@@ -50,11 +48,9 @@ model = RCmodel(
     dt=900, #15 min
     random_state= randomstate
 )
-
 # pas de temps 15min
 T_pred, train_time_rc = model.predict(X[:,0], X[:,1], X[:,2])
 metrics_rc = communs.compute_metrics(test1, T_pred, train_time_rc)
-
 communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_rc.xlsx",
     model_name="RC_model",
@@ -70,7 +66,6 @@ communs.save_predictions(
 model.save_parameters(f"results/{runfile}")
 
 #%%
-
 t_pred_day, train_time_rc_24 = model.simulate_by_day(X[:,0], X[:,1], X[:,2])
 metrics_rc_24 = communs.compute_metrics(test1, t_pred_day, train_time_rc_24)
 
@@ -82,32 +77,23 @@ communs.save_run_to_excel(
 )
 
 #%% benchmark 24h okay
-
 y_benchmark_true, y_benchmark_pred = model.benchmark(X[:,0])
 metrics_Benchmark_24h = communs.compute_metrics(y_benchmark_true, y_benchmark_pred)
-
 communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_benchmark_rc.xlsx",
     model_name="RC_model",
     metrics=metrics_Benchmark_24h,
     comment="benchmark, step 15min, 1jour/4"
 )
-
 #%% Regression linéaire
 
 
 model_rl = LinearRegressionModel(random_state=42)
-
 train_time_rl = model_rl.fit(X_train, y_train)
-
 y_pred, test_time_rl = model_rl.predict(x_val)
-
 metrics_rl = communs.compute_metrics(y_val, y_pred, train_time_rl, test_time_rl)
-
-
 model_rl.save_parameters(f"results/{runfile}/",
                           filename=f"{model_rl.__class__.__name__}.json")
-
 communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_rl.xlsx",
     model_name="regression linéaire",
@@ -120,12 +106,9 @@ communs.save_predictions(
     t_true=y_val,
     t_pred=y_pred
 )
-
 # rl 24h
-
 t_pred_24h, test_time_24h = model_rl.predict24hour(X[:,0], X[:,1], X[:,2])
 metrics_rl_24h = communs.compute_metrics(X[:,0], t_pred_24h, None, test_time_24h)
-
 communs.save_run_to_excel(
     filepath=f"results/{runfile}/metrics_rl.xlsx",
     model_name="regression linéaire",
@@ -138,7 +121,6 @@ communs.save_predictions(
     t_true=X[:,0],
     t_pred=t_pred_24h
 )
-
 #%% régression symbolique
 #pysr_output_dir = Path("results/run_1", "pysr").resolve()
 #pysr_output_dir.mkdir(exist_ok=True)
@@ -203,23 +185,65 @@ communs.save_predictions(
 #%%
 communs.agregate(runfile)
 communs.tolatex(runfile)
-
-
-
-
 #%%
 #non_linéarité
-
 poly = PolynomialFeatures(degree=2, include_bias=False)
-X_poly = poly.fit_transform(X)
+X_poly = poly.fit_transform(X_train)
 
 model_quad = LinearRegression()
-model_quad.fit(X_poly, y)
+model_quad.fit(X_poly, y_train)
 
-#
 feature_names = poly.get_feature_names_out(['T', 'Text', 'Q'])
 coeffs = dict(zip(feature_names, model_quad.coef_))
 intercept = model_quad.intercept_
 
 print("Équation thermique identifiée :")
 print(f"T_k+1 = {intercept:.4f} + " + " + ".join([f"({v:.4e} * {k})" for k, v in coeffs.items()]))
+
+X_test_poly = poly.transform(x_val)
+
+# 2. Prédiction avec le modèle entraîné
+y_pred = model_quad.predict(X_test_poly)
+metrics_quad =  communs.compute_metrics(y_val, y_pred)
+communs.save_run_to_excel(
+    filepath=f"results/{runfile}/metrics_quad_annee_dyn.xlsx",
+    model_name="regression linéaire quadratique",
+    metrics=metrics_quad,
+    comment="rl pas de temps 15min"
+)
+
+# 1. Calcul des résidus (Erreurs)
+residuals = y_val - y_pred
+
+# 2. Localisation du point critique (Max Error)
+idx_max = np.argmax(np.abs(residuals))
+print(f"L'erreur maximale de {np.abs(residuals[idx_max]):.2f}°C se situe à l'index {idx_max}.")
+print(f"Valeur réelle : {y_val[idx_max]:.2f}°C | Prédiction : {y_pred[idx_max]:.2f}°C")
+
+# 3. Graphique des résidus
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+
+# A. Visualisation temporelle
+ax1.plot(residuals, color='red', alpha=0.5, label="Résidus")
+ax1.axhline(0, color='black', linestyle='--')
+ax1.scatter(idx_max, residuals[idx_max], color='darkred', s=100, label="Point aberrant", zorder=5)
+ax1.set_title("Écart entre Réel et Prédiction au fil du temps")
+ax1.set_ylabel("Erreur [°C]")
+ax1.set_xlabel("Temps (Index)")
+ax1.legend()
+ax1.grid(True, linestyle=':', alpha=0.6)
+
+# B. Distribution des erreurs (Histogramme)
+ax2.hist(residuals, bins=100, color='blue', edgecolor='black', alpha=0.7)
+ax2.set_title("Distribution des erreurs")
+ax2.set_xlabel("Erreur [°C]")
+ax2.set_ylabel("Nombre d'occurrences")
+ax2.set_yscale('log') # Échelle log pour voir les erreurs rares comme celle de 10°C
+ax2.grid(True, linestyle=':', alpha=0.6)
+
+plt.tight_layout()
+plt.show()
+output_dir = "results/NonLinear"
+file_name = "Analyse_Residus_Quadratique_annee_dyn"
+plt.savefig(f"{output_dir}/{file_name}.pdf") # Pour le rapport final
+plt.savefig(f"{output_dir}/{file_name}.png") # Pour consultation rapide

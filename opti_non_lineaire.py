@@ -80,24 +80,51 @@ def solve_hvac_optimization(day_str, prices_vector, Tout_vector, T_initial):
         return m.P_cooling[t] <= m.Pc_max * (1-m.z) #Z[t] SI 96 choix de mode
     model.cool_excl = pyo.Constraint(model.T, rule=cool_excl_rule)
 
-    def thermal_dynamics_rule(m, t):
-
-        # Condition initiale à minuit (t=0)
-        if t ==0:
+    def thermal_dynamics_nonlinear_rule(m, t):
+        if t == 0:
             return m.T_zone[0] == T_initial[0]
-        #if t >= 95:
-        #    return pyo.Constraint.Skip
 
-        # On utilise tes coefficients a, b, c, d
-        #a, b, c, d = 0.952113783794049, 0.0287562819434527, 0.000135946989606225, 0.709746652516824 #pysr année dyn
-        a, b, c, d = 0.9943661768789569, 0.000761854668379236, 0.0000013999052626452457, 0.11967916284774205 #annee classique reg lin
+        # Tes coefficients extraits
 
-        return m.T_zone[t] == (a * m.T_zone[t-1] + b * Tout_vector[t-1] + c * m.Qhvac[t-1] + d)
+        #c = { annee classique 22 24
+        #    'intercept': -0.6525, 'T': 1.0811e+00, 'Text': -3.0963e-02, 'Q': -1.5546e-04,
+        #    'T2': -2.3372e-03, 'T_Text': 1.4482e-03, 'T_Q': 7.0463e-06,
+        #    'Text2': -4.0213e-05, 'Text_Q': -2.9369e-07, 'Q2': 2.6866e-10
+        #}
+        c = { #annee dyn
+            'intercept': 0.2750,
+            'T': 1.0211e+00,
+            'Text': -1.6858e-02,
+            'Q': -2.7234e-04,
+            'T2': -1.8108e-03,
+            'T_Text': 1.1038e-03,
+            'T_Q': 1.3927e-05,
+            'Text2': 1.5066e-04,
+            'Text_Q': -1.5541e-06,
+            'Q2': -5.1683e-09
+        }
 
-    model.dynamics = pyo.Constraint(model.T_instants, rule=thermal_dynamics_rule)
+        # Raccourcis pour la lisibilité
+        Tk = m.T_zone[t - 1]
+        Tx = Tout_vector[t - 1]
+        Qk = m.Qhvac[t - 1]
+
+        # L'équation quadratique complète
+        return m.T_zone[t] == (
+                c['intercept'] +
+                c['T'] * Tk + c['Text'] * Tx + c['Q'] * Qk +
+                c['T2'] * (Tk ** 2) +
+                c['T_Text'] * (Tk * Tx) +
+                c['T_Q'] * (Tk * Qk) +
+                c['Text2'] * (Tx ** 2) +
+                c['Text_Q'] * (Tx * Qk) +
+                c['Q2'] * (Qk ** 2)
+        )
+    model.dynamics = pyo.Constraint(model.T_instants, rule=thermal_dynamics_nonlinear_rule)
 
     # --- RÉSOLUTION ---
     solver = pyo.SolverFactory('gurobi')
+    solver.options['NonConvex'] = 2
     solver.solve(model)
 
     return model
@@ -167,91 +194,11 @@ print("\n--- RÉSUMÉ DES COÛTS PAR JOUR ---")
 print(df_summary)
 #%%
 # --- CRÉATION DU FICHIER EXCEL MULTI-FEUILLES ---
-communs.export_opti_results_to_excel(df_summary, results_all_days, output_path ="opti/Resultats_Optimisation_equ_reg_lin_classique.xlsx")
+communs.export_opti_results_to_excel(df_summary, results_all_days, output_path ="opti/Resultats_Optimisation_equ_reg_lin.xlsx")
 
 # --- BOUCLE D'EXÉCUTION ---
 # On boucle sur tous les jours présents dans tes résultats (les 12 jours)
 for day in results_all_days.keys():
    print(f"Génération des graphiques pour : {day}...")
-   communs.save_plot_day(day, results_all_days, output_dir="opti/results_opti_equ_reg_lin_classique")
-
-
-#%%%
-#traitement données
-# --- BOUCLE D'ANALYSE ---
-all_stats_list = []
-all_df_days_dict = {}
-all_stats_list_sans_opti = []
-all_df_days_dict_sans_opti = {}
-for day in results_all_days.keys():
-    try:
-        stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days)
-        all_stats_list.append(stats)
-        all_df_days_dict[day] = df_cleaned
-        stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days)
-        all_stats_list_sans_opti.append(stats_sans_opti)
-        all_df_days_dict_sans_opti[day] = df_sans_opti
-        communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti)
-        print(f"{day} | Coût E+: {stats['Cost_Real']:.2f}€ vs Opti: {stats['Cost_Opti']:.2f}€")
-    except Exception as e:
-        print(f"Erreur sur {day}: {e}")
-communs.export_validation_to_excel(all_stats_list, all_df_days_dict)
-communs.export_validation_to_excel(all_stats_list_sans_opti, all_df_days_dict_sans_opti, output_path="opti/Validation_EPlus_sans_Opti.xlsx")
-
-#%%
-def prepare_for_api(day_str, t_zone_opt):
-    """
-    Convertit le vecteur de 96 points en DataFrame temporel pour l'API.
-    """
-    # Création de l'index sur 97 points (00:00 à 00:00 J+1)
-    # On utilise l'argument 'day_str' pour caler la date
-    start_dt = pd.to_datetime(day_str).replace(year=2017)
-
-    # Générer 97 timestamps espacés de 15 min
-    times = pd.date_range(start=start_dt, periods=len(t_opt), freq='15min', tz= 'UTC')
-
-    # Création du DataFrame que l'API va interpoler
-    df = pd.DataFrame(index=times)
-    df['Tin'] = t_zone_opt
-
-
-    # S'assurer que le format est bien Datetime64
-    df.index = pd.to_datetime(df.index)
-
-    return df
-
-data_annee = communs.load_data_api("dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv")
-
-for day in selected_days:
-    if day in results_all_days:
-        day_dt = pd.to_datetime(day).replace(year=2017)
-        building_model = MediumOffice(day)
-        building_model.idf_filepath = building_model.modify_idf(day_dt)
-        # 1. Récupérer les T_zone optimisées
-        t_opt = results_all_days[day]['T_zone']
-
-        # 2. Préparer le DataFrame de consigne
-        df_api_input = prepare_for_api(day, t_opt)
-
-        # 3. Injecter dans ton objet BuildingModel
-        # Il faut que l'objet 'z' dans 'conditioned_zone_assets' reçoive ce DF
-        for zone in building_model.conditioned_zone_assets:
-            print(zone.name)
-            if zone.name == "LIVINGUNIT":
-                zone.expected_results = df_api_input
-        building_model.simulation_exante = data_annee
-        # 4. Configurer le simulateur
-        simulator = EnergyPlusSimulator()
-
-        # 5. Lancer la simulation de validation
-        # run_period_of_interest est souvent 1 (dépend de ton IDF)
-        df_final_api, warmup_steps = simulator.run_simulation(
-            buildingmodel=building_model,
-            run_period_of_interest=3,
-            callbacks=simulator.callback_temperature_control,
-            verbose=True
-        )
-
-        # 6. Sauvegarder les vrais résultats EnergyPlus
-        df_final_api.to_csv(f"opti/bat/validation_EP_{day}.csv", sep=";")
+   communs.save_plot_day(day, results_all_days, output_dir="opti/results_opti_equ_reg_lin")
 

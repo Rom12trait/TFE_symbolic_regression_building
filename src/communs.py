@@ -15,9 +15,9 @@ def load_data(filepath):
     design_days =2*rows_per_day+1
     dict_newindex = {
         'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
-        'LIVINGUNIT:Zone Air Temperature [C](TimeStep)': 'Tzone',
-        'LIVINGUNIT:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
-        'LIVINGUNIT:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
     }
     df = pd.read_csv(filepath, sep=";", skiprows=range (1, design_days))
     #print(df.columns)
@@ -102,14 +102,14 @@ def load_data_opti_new(filepath, selected_days):
     rows_per_day = 96
     design_days = 2 * rows_per_day + 1
 
-    dict_newindex = {
+    dict_newindex = { # LIVINGUNIT pour csv année classique  LIVING_UNIT1 dans le csv energyplus baseline (20-24)
         'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
-        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
-        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
-        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+        'LIVINGUNIT:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVINGUNIT:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVINGUNIT:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
         'Fans:Electricity [J](TimeStep)': 'Pfans',
-        'LIVING_UNIT1:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
-        'LIVING_UNIT1:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
+        'LIVINGUNIT:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
+        'LIVINGUNIT:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
         'Heating:Electricity [J](TimeStep)': 'P_heating',
         'Cooling:Electricity [J](TimeStep)': 'P_cooling'
     }
@@ -150,8 +150,12 @@ def load_data_opti_new(filepath, selected_days):
             # impact du HVAC se voit à 00:15
             data_12_days[day] = {
                 'Tout': day_slice['Tout'].iloc[:96].values,
-                'Tset_heat': day_slice['Tset_heat'].iloc[:96].values,
-                'Tset_cool': day_slice['Tset_cool'].iloc[:96].values,
+                'Tset_heat': day_slice['Tset_heat'].iloc[:96].values if 'Tset_heat' in day_slice.columns else np.ones(
+                    96) * 20,
+                'Tset_cool': day_slice['Tset_cool'].iloc[:96].values if 'Tset_cool' in day_slice.columns else np.ones(
+                    96) * 24,
+                #'Tset_heat': day_slice['Tset_heat'].iloc[:96].values,
+                #'Tset_cool': day_slice['Tset_cool'].iloc[:96].values,
                 'Tzone_init': day_slice['Tzone'].iloc[0],
                 'Tzone_real': day_slice['Tzone'].values,
                 'Pfans': day_slice['Pfans'].iloc[:96].values / 900
