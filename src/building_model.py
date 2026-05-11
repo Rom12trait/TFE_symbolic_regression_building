@@ -710,7 +710,7 @@ class MediumOffice(BuildingModel):
         for z in self.conditioned_zone_assets:
             z.set_occupancy_weights(yearly_occ_w[z.name])
 
-    def modify_idf(self, T0, idd_filepath=None, random=False, np_rng=None):
+    def modify_idf(self, T0, idd_filepath="C:/Users/Corentin/energyplus/Energy+.idd", random=False, np_rng=None):
         """
         Modify the IDF file.
         :param idf_filepath: idf file path, the building model input data file
