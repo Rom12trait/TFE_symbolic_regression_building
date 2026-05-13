@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 import importlib
 from src import communs
@@ -21,7 +22,8 @@ from src.building_model import MediumOffice
 
 
 
-runfile="LinearV2_annee_classique" #LinearV2_annee_dyn
+runfile="LinearV2_annee_classique" #LinearV2_annee_classique" #LinearV2_annee_dyn
+yeartype = 'classique' #ou 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
 #Charger les données
@@ -48,8 +50,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # 2. INSTANCIATION DES MODÈLES
 models = {
     #"RC": physical_models.RCModel(R=0.008636689, C=27.14e6),
-    "Linear": regression_models.PolynomialThermalModel(degree=1),
-    "Quadratic": regression_models.PolynomialThermalModel(degree=2),
+    #"Linear": regression_models.PolynomialThermalModel(degree=1),
+    #"Quadratic": regression_models.PolynomialThermalModel(degree=2),
     "PySR": symbolic_models.PySRThermalModel(niterations=80)
 }
 
@@ -123,13 +125,13 @@ validator = EnergyPlusValidator(MediumOffice, data_annee)
 all_validation_results = {}
 
 for name, model in models.items():
+    results_all_days = {}
+    summary_data = []
     if name == "RC":
         continue  # On saute le RC pour l'optimisation
     print(f"\n--- Optimisation avec le modèle : {name} ---")
     optimizer = HVACOptimizer(thermal_model=model)
 
-    results_all_days = {}
-    summary_data = []
     # Dans ta boucle sur les 12 jours :
     for day in selected_days:
         prices = dict_days_prices[day]
@@ -137,7 +139,7 @@ for name, model in models.items():
         t_init = data_12days[day]['Tzone_real'][0]  # Première valeur
 
         # Résolution automatique (détecte si Gurobi ou Ipopt est requis)
-        model_resolved, _ = optimizer.solve(prices, tout, t_init)
+        model_resolved, _ = optimizer.solve(prices, tout, t_init, year = yeartype)
 
         # 3. Extraction des vecteurs de résultats
         p_heat_opt = [pyo.value(model_resolved.P_heating[t]) for t in model_resolved.T]
@@ -181,19 +183,19 @@ for name, model in models.items():
     #
     # --- CRÉATION DU FICHIER EXCEL MULTI-FEUILLES ---
     communs.export_opti_results_to_excel(df_summary, results_all_days,
-                                         output_path=f"optiV2/Resultats_Optimisation_{name}_classique.xlsx")
+                                         output_path=f"optiV2/Resultats_Optimisation_{name}_{runfile}.xlsx")
 
     # --- BOUCLE D'EXÉCUTION ---
     # On boucle sur tous les jours présents dans tes résultats (les 12 jours)
     for day in results_all_days.keys():
         print(f"Génération des graphiques pour : {day}...")
-        communs.save_plot_day(day, results_all_days, output_dir=f"optiV2/results_opti_{name}_classique")
+        communs.save_plot_day(day, results_all_days, output_dir=f"optiV2/results_opti_{name}_{runfile}")
 
     for day in selected_days:
         # --- VALIDATION API (XPOST) ---
         t_opt = results_all_days[day]['T_zone']
 
-        df_ep_reality = validator.run_validation(day, t_opt, output_dir=f"apiV2/{name}_{runfile}")
+        df_ep_reality = validator.run_validation(day, t_opt, name= name, output_dir=f"apiV2/{name}_{runfile}")
         # Stockage pour analyse
         all_validation_results[day] = df_ep_reality
 
@@ -203,13 +205,14 @@ for name, model in models.items():
     all_df_days_dict_sans_opti = {}
     for day in results_all_days.keys():
         try:
-            stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days)
+            stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days, name,  csv_dir = f"apiV2/{name}_{runfile}")
             all_stats_list.append(stats)
             all_df_days_dict[day] = df_cleaned
-            stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days)
+            stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days) #utilise fichier in opti/Eplus_run_20_24
             all_stats_list_sans_opti.append(stats_sans_opti)
             all_df_days_dict_sans_opti[day] = df_sans_opti
-            communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti)
+            communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti, output_dir= f"apiV2/{name}_{runfile}")
+            plt.close('all')
             print(f"{day} | Coût E+: {stats['Cost_Real']:.2f}€ vs Opti: {stats['Cost_Opti']:.2f}€")
         except Exception as e:
             print(f"Erreur sur {day}: {e}")

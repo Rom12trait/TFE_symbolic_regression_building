@@ -186,11 +186,11 @@ def load_data_api(filepath):
     return data_annual
 
 
-def analyze_variable_timestep_results(day_str, results_all_days, csv_dir="opti/bat"):
+def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=None):
     """
     Analyse les résultats E+ à pas de temps variables et les compare à l'opti.
     """
-    csv_path = os.path.join(csv_dir, f"validation_EP_{day_str}.csv")
+    csv_path = os.path.join(csv_dir, f"validation_EP_{name}_{day_str}.csv")
     df = pd.read_csv(csv_path, sep=';')
 
     # --- ÉTAPE DE CORRECTION DU TIMESTEP ---
@@ -258,19 +258,36 @@ def analyze_variable_timestep_results(day_str, results_all_days, csv_dir="opti/b
     # On ne sélectionne QUE les colonnes de type numérique (int ou float)
     # Cela exclut automatiquement 'Timestep' (string) et 'Warmup' (bool)
     df_numeric = df_day.select_dtypes(include=[np.number])
+
+    df_numeric['P_total_W'] = (df_numeric['Heating:Electricity'] +
+                               df_numeric['Cooling:Electricity'] +
+                               df_numeric['Fans:Electricity']) / (df_day['dt_seconds'])
     # On fait le resample sur ce DataFrame nettoyé
     df_resampled = df_numeric.resample('15min').mean()
 
+    # Extraction des vecteurs 96 points
+    p_real_96 = df_resampled['P_total_W'].iloc[:96].fillna(0).values
+
+    # RMSE Puissance [W]
+    rmse_power = np.sqrt(np.mean((p_tot_opt - p_real_96) ** 2))
+
+    # MAPE Puissance [%]
+    # Note : On ajoute un petit epsilon (1e-5) au dénominateur pour éviter la division par zéro
+    # si le système est éteint (0W).
+    mape_power = np.mean(np.abs((p_real_96 - p_tot_opt) / (p_real_96 + 1e-5))) * 100
+
     # On récupère la température
     t_real_96 = df_resampled['Zone Air Temperature,livingunit'].iloc[:96].values
-
     rmse_temp = np.sqrt(np.mean((t_opt_96 - t_real_96) ** 2))
+
     stats = {
         'Day': day_str,
         'Cost_Opti': res_opt['total_Cost'],
         'Cost_Real': total_cost_day_ep,
         'Difference_Euro': total_cost_day_ep - res_opt['total_Cost'],
         'RMSE_Temp': rmse_temp,
+        'RMSE_Power_W': rmse_power,
+        'MAPE_Power_Pct': mape_power,
         'Energy_Opti_kWh': energy_opt_kwh,
         'Energy_Real_kWh': total_energy_kwh,
         'P_Avg_Opti_W': avg_power_opt_w,
@@ -559,8 +576,10 @@ def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
     plt.savefig(f"{output_dir}/Prix_Couts_{day}.png")
     plt.close()
 
+    plt.close('all')
 
-def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, output_dir="opti/plots_validation"):
+
+def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, output_dir=None):
     """
     Génère les graphiques comparatifs en utilisant le DataFrame déjà filtré.
     """
@@ -570,6 +589,7 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
 
     # Pour l'opti (97 points de 0h à 24h)
     hours_opt = np.linspace(0, 24, 97)
+    hours_p_opt = np.linspace(0, 24, 96)
     # --- Axes X ---
     time_source = df_cleaned.index if not 'datetime' in df_cleaned.columns else df_cleaned['datetime']
     # Pour EnergyPlus (on utilise les heures réelles du DataFrame nettoyé)
@@ -596,10 +616,11 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
     plt.savefig(f"{output_dir}/Comp_Temp_{day_str}.pdf")
+    plt.savefig(f"{output_dir}/Comp_Temp_{day_str}.png")
     plt.close()
 
     # --- FIGURE 2 : COMPARAISON PUISSANCES THERMIQUES (Q_hvac) ---
-    plt.figure()
+
     # Opti : Puissance thermique théorique (96 points)
     # On utilise tes rendements : eta_h=1.86, eta_c=3.73
     q_opt = (1.86 * np.array(res_opt['P_heating'])) - (3.73 * np.array(res_opt['P_cooling']))
@@ -610,7 +631,7 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
              df_cleaned['Zone Air System Sensible Cooling Rate,livingunit']
     q_real_base = df_baseline['LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)'] - df_baseline[
         'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)']
-
+    plt.figure()
     plt.step(hours_q_opt, q_opt, where='post', label="Q_hvac Opti (Théorique)", color='red', alpha=0.6)
     plt.plot(hours_ep, q_real, label="Q_hvac EnergyPlus (Réel)", color='blue', alpha=0.7)
     plt.plot(hours_ep_base, q_real_base, 'k-', label="Q Baseline", alpha=0.4)
@@ -624,12 +645,13 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
     plt.savefig(f"{output_dir}/Comp_Power_{day_str}.pdf")
+    plt.savefig(f"{output_dir}/Comp_Power_{day_str}.png")
     plt.close()
 
     # --- Figure 3 Power ---
     # Opti : P_heat positif, P_cool négatif
-    #p_heat_opt = np.array(res_opt['P_heating'])
-    #p_cool_opt = -np.array(res_opt['P_cooling'])
+    p_heat_opt = np.array(res_opt['P_heating'])
+    p_cool_opt = -np.array(res_opt['P_cooling'])
 
     # EnergyPlus : Conversion Joules -> Watts moyen sur l'intervalle
     # P [W] = Energie [J] / dt [s]
@@ -644,12 +666,12 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     plt.figure(figsize=(8, 5))  # Taille adaptée pour être lisible une fois côte à côte
 
     # Tracés Optimisation
-    #plt.step(hours_p_opt, p_heat_opt, where='post', label="P_heat Opti (W)", color='red', alpha=0.5)
-    #plt.step(hours_p_opt, p_cool_opt, where='post', label="P_cool Opti (W)", color='blue', alpha=0.5)
+    plt.step(hours_p_opt, p_heat_opt, where='post', label="P_heat Opti (W)", color='red', alpha=0.5)
+    plt.step(hours_p_opt, p_cool_opt, 'r--', where='post', label="P_cool Opti (W)", alpha=0.5)
 
     # Tracés EnergyPlus (Lignes continues)
-    plt.plot(hours_ep, p_heat_ep, label="P_heat E+ (Réel)", color='darkred', alpha=0.8, linewidth=1.2)
-    plt.plot(hours_ep, p_cool_ep, label="P_cool E+ (Réel)", color='darkblue', alpha=0.8, linewidth=1.2)
+    plt.plot(hours_ep, p_heat_ep, 'b-', label="P_heat E+ (Réel)", alpha=0.8, linewidth=1.2)
+    plt.plot(hours_ep, p_cool_ep, 'b--', label="P_cool E+ (Réel)", alpha=0.8, linewidth=1.2)
 
     # Tracés Baseline (Gris/Noir)
     plt.plot(hours_ep_base, p_heat_ep_base, 'k-', label="P_heat Baseline", alpha=0.3)
@@ -666,7 +688,10 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     plt.tight_layout()
     # Sauvegarde en PDF
     plt.savefig(f"{output_dir}/Comp_Electric_Power_{day_str}.pdf")
+    plt.savefig(f"{output_dir}/Comp_Electric_Power_{day_str}.png")
     plt.close()
+
+    plt.close('all')
 
 
 

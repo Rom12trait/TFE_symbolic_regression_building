@@ -11,6 +11,7 @@ class PySRThermalModel(BaseModel):
         super().__init__(**kwargs)
         self.scaler_X = StandardScaler()
         self.scaler_y = StandardScaler()
+        self.degree = 1
         self.model = PySRRegressor(
             niterations=niterations,
             populations=10,

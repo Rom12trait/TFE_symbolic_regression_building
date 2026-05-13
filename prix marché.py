@@ -77,7 +77,7 @@ def solve_hvac_optimization(day_str, prices_vector, Tout_vector, T_initial):
         return m.P_heating[t] <= m.Ph_max * m.z    #Z[t] SI 96 choix de mode
     model.heat_excl = pyo.Constraint(model.T, rule=heat_exc_rule)
     def cool_excl_rule(m,t):
-        return m.P_cooling[t] <= m.Pc_max * (1-m.z) #Z[t] SI 96 choix de mode
+        return m.P_cooling[t] <= m.Pc_max * (1 - m.z) #Z[t] SI 96 choix de mode
     model.cool_excl = pyo.Constraint(model.T, rule=cool_excl_rule)
 
     def thermal_dynamics_rule(m, t):

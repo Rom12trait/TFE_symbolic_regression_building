@@ -27,7 +27,7 @@ class EnergyPlusValidator:
         df.index = pd.to_datetime(df.index)
         return df
 
-    def run_validation(self, day, t_zone_opt, output_dir="apiV2"):
+    def run_validation(self, day, t_zone_opt, name = None, output_dir="apiV2"):
         """Lance la simulation EnergyPlus avec les consignes optimisées."""
         day_dt = pd.to_datetime(day).replace(year=2017)
 
@@ -53,7 +53,7 @@ class EnergyPlusValidator:
 
         # 4. Sauvegarde
         Path(output_dir).mkdir(parents=True, exist_ok=True)
-        save_path = Path(output_dir) / f"validation_EP_{day}.csv"
+        save_path = Path(output_dir) / f"validation_EP_{name}_{day}.csv"
         df_final_api.to_csv(save_path, sep=";")
 
         return df_final_api
