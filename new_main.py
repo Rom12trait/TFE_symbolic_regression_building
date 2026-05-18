@@ -22,21 +22,22 @@ from src.building_model import MediumOffice
 
 
 
-runfile="LinearV2_annee_classique" #LinearV2_annee_classique" #LinearV2_annee_dyn
-yeartype = 'classique' #ou 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
+runfile="LinearV2_annee_dyn" #LinearV2_annee_classique" #LinearV2_annee_dyn
+yeartype = 'dynamique' #ou 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
+version = 'V4'
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
 #Charger les données
 #soit airport + brussel bel ensemble ou annee dyn
-df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
-df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-#df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv")
-#df_test = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique_brussel_bel.csv")
+#df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
+#df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
+df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv")
+df_test = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique_brussel_bel.csv")
 idf = load_idf(
     "dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
 )
-data_annee = communs.load_data_api("dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv")
+data_annee = communs.load_data_api("opti/EPlus_run_20_24/model_annee_classique_20_24.csv") #dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv avant
 
 X = df[["Tzone", "Tout", "Qhvac"]].values
 y = df["Tzone_next"].values
@@ -55,6 +56,7 @@ models = {
     "PySR": symbolic_models.PySRThermalModel(niterations=80)
 }
 
+#%%
 for name, model in models.items():
     print(f"\n>>> Modèle : {name}")
 
@@ -115,7 +117,7 @@ print(" Analyse annuelle 24h terminée.")
 #%%
 selected_days, dict_days_prices, df_prix = communs.process_market_prices('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv', seed = 42)
 data_12days, data_annual = communs.load_data_opti_new(
-    "dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv", selected_days)
+    "opti/Eplus_run_20_24/model_annee_classique_20_24.csv", selected_days) #avant dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv
 #opti/EPlus_run_20_24/model_annee_classique_20_24.csv
 # --- PARAMÈTRES PHYSIQUES ---
 eta_h, eta_c = communs.calculate_average_efficiencies(data_annual) #c= 3.73 h = 1.86
@@ -183,19 +185,21 @@ for name, model in models.items():
     #
     # --- CRÉATION DU FICHIER EXCEL MULTI-FEUILLES ---
     communs.export_opti_results_to_excel(df_summary, results_all_days,
-                                         output_path=f"optiV2/Resultats_Optimisation_{name}_{runfile}.xlsx")
+                                         output_dir=f"opti{version}", output_path = f"Resultats_Optimisation_{name}_{runfile}.xlsx")
 
     # --- BOUCLE D'EXÉCUTION ---
     # On boucle sur tous les jours présents dans tes résultats (les 12 jours)
     for day in results_all_days.keys():
         print(f"Génération des graphiques pour : {day}...")
-        communs.save_plot_day(day, results_all_days, output_dir=f"optiV2/results_opti_{name}_{runfile}")
+        communs.save_plot_day(day, results_all_days, output_dir=f"opti{version}/results_opti_{name}_{runfile}")
+
+    #api
 
     for day in selected_days:
         # --- VALIDATION API (XPOST) ---
         t_opt = results_all_days[day]['T_zone']
 
-        df_ep_reality = validator.run_validation(day, t_opt, name= name, output_dir=f"apiV2/{name}_{runfile}")
+        df_ep_reality = validator.run_validation(day, t_opt, name=name, output_dir=f"api{version}/{name}_{runfile}")
         # Stockage pour analyse
         all_validation_results[day] = df_ep_reality
 
@@ -205,16 +209,16 @@ for name, model in models.items():
     all_df_days_dict_sans_opti = {}
     for day in results_all_days.keys():
         try:
-            stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days, name,  csv_dir = f"apiV2/{name}_{runfile}")
+            stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days, name,  csv_dir = f"api{version}/{name}_{runfile}")
             all_stats_list.append(stats)
             all_df_days_dict[day] = df_cleaned
             stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days) #utilise fichier in opti/Eplus_run_20_24
             all_stats_list_sans_opti.append(stats_sans_opti)
             all_df_days_dict_sans_opti[day] = df_sans_opti
-            communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti, output_dir= f"apiV2/{name}_{runfile}")
+            communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti, output_dir= f"api{version}/{name}_{runfile}")
             plt.close('all')
             print(f"{day} | Coût E+: {stats['Cost_Real']:.2f}€ vs Opti: {stats['Cost_Opti']:.2f}€")
         except Exception as e:
             print(f"Erreur sur {day}: {e}")
-    communs.export_validation_to_excel(all_stats_list,all_df_days_dict, output_path=f"apiV2/{name}_{runfile}/Validation_EPlus_VS_Opti.xlsx")
-    communs.export_validation_to_excel(all_stats_list_sans_opti, all_df_days_dict_sans_opti, output_path=f"apiV2/{name}_{runfile}/Validation_EPlus_sans_Opti.xlsx")
+    communs.export_validation_to_excel(all_stats_list,all_df_days_dict, output_path=f"api{version}/{name}_{runfile}/Validation_EPlus_VS_Opti.xlsx")
+    communs.export_validation_to_excel(all_stats_list_sans_opti, all_df_days_dict_sans_opti, output_path=f"api{version}/{name}_{runfile}/Validation_EPlus_sans_Opti.xlsx")

@@ -30,7 +30,6 @@ class EnergyPlusValidator:
     def run_validation(self, day, t_zone_opt, name = None, output_dir="apiV2"):
         """Lance la simulation EnergyPlus avec les consignes optimisées."""
         day_dt = pd.to_datetime(day).replace(year=2017)
-
         # 1. Initialiser le modèle du bâtiment pour ce jour spécifique
         building = self.building_model_class(day)
         building.idf_filepath = building.modify_idf(day_dt)
@@ -39,8 +38,9 @@ class EnergyPlusValidator:
         # 2. Injecter les consignes optimisées (T_zone)
         df_api_input = self.prepare_api_input(day, t_zone_opt)
         for zone in building.conditioned_zone_assets:
-            if zone.name == "LIVINGUNIT":
+            if zone.name == "LIVING_UNIT1":
                 zone.expected_results = df_api_input
+        df_final_api = {}
 
         # 3. Lancer EnergyPlus
         print(f"🚀 Simulation EnergyPlus pour le jour {day}...")

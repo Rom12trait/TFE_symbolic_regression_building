@@ -29,13 +29,13 @@ Actuator,Schedule:Compact,Schedule Value,ALWAYS_AVAIL,[ ]
 Actuator,Schedule:Compact,Schedule Value,ALWAYS_OFF,[ ]
 Actuator,Schedule:Compact,Schedule Value,HEATING_SCH_HREF,[ ]
 Actuator,Schedule:Compact,Schedule Value,COOLING_SCH_HREF,[ ]
-Actuator,Schedule:Compact,Schedule Value,HEATING_SCH,[ ]
-Actuator,Schedule:Compact,Schedule Value,COOLING_SCH,[ ]
 Actuator,Schedule:Compact,Schedule Value,HEATING_SCH_HERSPROGTSTAT,[ ]
 Actuator,Schedule:Compact,Schedule Value,COOLING_SCH_HERSPROGTSTAT,[ ]
 Actuator,Schedule:Compact,Schedule Value,HEATING_SCH_ERIPROGTSTAT,[ ]
 Actuator,Schedule:Compact,Schedule Value,COOLING_SCH_ERIPROGTSTAT,[ ]
 Actuator,Schedule:Compact,Schedule Value,FAN_CYCLE,[ ]
+Actuator,Schedule:Compact,Schedule Value,HEATING_SCH,[ ]
+Actuator,Schedule:Compact,Schedule Value,COOLING_SCH,[ ]
 Actuator,Schedule:Compact,Schedule Value,SCHEDULEOSCSLABAVERAGESURFACETEMP,[ ]
 Actuator,Schedule:Compact,Schedule Value,SCHEDULEOSCSLABPERIMETERTEMP,[ ]
 Actuator,Schedule:Compact,Schedule Value,SCHEDULEOSCSLABCORETEMP,[ ]
@@ -456,10 +456,10 @@ Actuator,Surface,Outdoor Air Drybulb Temperature,ROOF_BACK_UNIT1,[C]
 Actuator,Surface,Outdoor Air Wetbulb Temperature,ROOF_BACK_UNIT1,[C]
 Actuator,Surface,Outdoor Air Wind Speed,ROOF_BACK_UNIT1,[m/s]
 Actuator,Surface,Outdoor Air Wind Direction,ROOF_BACK_UNIT1,[degree]
-Actuator,Zone,Outdoor Air Drybulb Temperature,LIVINGUNIT,[C]
-Actuator,Zone,Outdoor Air Wetbulb Temperature,LIVINGUNIT,[C]
-Actuator,Zone,Outdoor Air Wind Speed,LIVINGUNIT,[m/s]
-Actuator,Zone,Outdoor Air Wind Direction,LIVINGUNIT,[degree]
+Actuator,Zone,Outdoor Air Drybulb Temperature,LIVING_UNIT1,[C]
+Actuator,Zone,Outdoor Air Wetbulb Temperature,LIVING_UNIT1,[C]
+Actuator,Zone,Outdoor Air Wind Speed,LIVING_UNIT1,[m/s]
+Actuator,Zone,Outdoor Air Wind Direction,LIVING_UNIT1,[degree]
 Actuator,Zone,Outdoor Air Drybulb Temperature,GARAGE1,[C]
 Actuator,Zone,Outdoor Air Wetbulb Temperature,GARAGE1,[C]
 Actuator,Zone,Outdoor Air Wind Speed,GARAGE1,[m/s]
@@ -513,14 +513,14 @@ Actuator,Supply Side Branch,On/Off Supervisory,WATER HEATER BRANCH_UNIT1,[on/off
 Actuator,Plant Component WaterHeater:HeatPump:WrappedCondenser,On/Off Supervisory,WATER HEATER_UNIT1,[fraction]
 Actuator,Supply Side Branch,On/Off Supervisory,DHW SUPPLY OUTLET BRANCH_UNIT1,[on/off]
 Actuator,Plant Component Pipe:Indoor,On/Off Supervisory,DHW SUPPLY OUTLET PIPE_UNIT1,[fraction]
-Actuator,Sizing:Zone,Zone Design Heating Air Mass Flow Rate,LIVINGUNIT,[kg/s]
-Actuator,Sizing:Zone,Zone Design Cooling Air Mass Flow Rate,LIVINGUNIT,[kg/s]
-Actuator,Sizing:Zone,Zone Design Heating Load,LIVINGUNIT,[W]
-Actuator,Sizing:Zone,Zone Design Cooling Load,LIVINGUNIT,[W]
-Actuator,Sizing:Zone,Zone Design Heating Vol Flow,LIVINGUNIT,[m3/s]
-Actuator,Sizing:Zone,Zone Design Cooling Vol Flow,LIVINGUNIT,[m3/s]
-Actuator,Zone Temperature Control,Heating Setpoint,LIVINGUNIT,[C]
-Actuator,Zone Temperature Control,Cooling Setpoint,LIVINGUNIT,[C]
+Actuator,Sizing:Zone,Zone Design Heating Air Mass Flow Rate,LIVING_UNIT1,[kg/s]
+Actuator,Sizing:Zone,Zone Design Cooling Air Mass Flow Rate,LIVING_UNIT1,[kg/s]
+Actuator,Sizing:Zone,Zone Design Heating Load,LIVING_UNIT1,[W]
+Actuator,Sizing:Zone,Zone Design Cooling Load,LIVING_UNIT1,[W]
+Actuator,Sizing:Zone,Zone Design Heating Vol Flow,LIVING_UNIT1,[m3/s]
+Actuator,Sizing:Zone,Zone Design Cooling Vol Flow,LIVING_UNIT1,[m3/s]
+Actuator,Zone Temperature Control,Heating Setpoint,LIVING_UNIT1,[C]
+Actuator,Zone Temperature Control,Cooling Setpoint,LIVING_UNIT1,[C]
 Actuator,AirTerminal:SingleDuct:ConstantVolume:NoReheat,Mass Flow Rate,ZONEDIRECTAIR_UNIT1,[kg/s]
 Actuator,Sizing:System,Main Supply Volume Flow Rate,CENTRAL SYSTEM_UNIT1,[m3/s]
 Actuator,Sizing:System,Main Supply Coincident Peak Cooling Mass Flow Rate,CENTRAL SYSTEM_UNIT1,[kg/s]
@@ -1017,10 +1017,10 @@ InternalVariable,Plug and Process Power Design Level,ELECTRIC_RANGE1,[W]
 InternalVariable,Plug and Process Power Design Level,TELEVISION1,[W]
 InternalVariable,Plug and Process Power Design Level,ELECTRIC_MELS1,[W]
 InternalVariable,Plug and Process Power Design Level,IECC_ADJ1,[W]
-InternalVariable,Zone Floor Area,LIVINGUNIT,[m2]
-InternalVariable,Zone Air Volume,LIVINGUNIT,[m3]
-InternalVariable,Zone Multiplier,LIVINGUNIT,[ ]
-InternalVariable,Zone List Multiplier,LIVINGUNIT,[ ]
+InternalVariable,Zone Floor Area,LIVING_UNIT1,[m2]
+InternalVariable,Zone Air Volume,LIVING_UNIT1,[m3]
+InternalVariable,Zone Multiplier,LIVING_UNIT1,[ ]
+InternalVariable,Zone List Multiplier,LIVING_UNIT1,[ ]
 InternalVariable,Zone Floor Area,GARAGE1,[m2]
 InternalVariable,Zone Air Volume,GARAGE1,[m3]
 InternalVariable,Zone Multiplier,GARAGE1,[ ]
@@ -1041,23 +1041,23 @@ InternalVariable,Fan Nominal Total Efficiency,OAEXHAUSTFAN_UNIT1,[fraction]
 InternalVariable,Fan Maximum Mass Flow Rate,HEAT PUMP WATER HEATER FAN_UNIT1,[kg/s]
 InternalVariable,Fan Nominal Pressure Rise,HEAT PUMP WATER HEATER FAN_UNIT1,[Pa]
 InternalVariable,Fan Nominal Total Efficiency,HEAT PUMP WATER HEATER FAN_UNIT1,[fraction]
-InternalVariable,Final Zone Design Heating Air Mass Flow Rate,LIVINGUNIT,[kg/s]
-InternalVariable,Intermediate Zone Design Heating Air Mass Flow Rate,LIVINGUNIT,[kg/s]
-InternalVariable,Final Zone Design Cooling Air Mass Flow Rate,LIVINGUNIT,[kg/s]
-InternalVariable,Intermediate Zone Design Cooling Air Mass Flow Rate,LIVINGUNIT,[kg/s]
-InternalVariable,Final Zone Design Heating Load,LIVINGUNIT,[W]
-InternalVariable,Intermediate Zone Design Heating Load,LIVINGUNIT,[W]
-InternalVariable,Final Zone Design Cooling Load,LIVINGUNIT,[W]
-InternalVariable,Intermediate Zone Design Cooling Load,LIVINGUNIT,[W]
-InternalVariable,Final Zone Design Heating Air Density,LIVINGUNIT,[kg/m3]
-InternalVariable,Intermediate Zone Design Heating Air Density,LIVINGUNIT,[kg/m3]
-InternalVariable,Final Zone Design Cooling Air Density,LIVINGUNIT,[kg/m3]
-InternalVariable,Intermediate Zone Design Cooling Air Density,LIVINGUNIT,[kg/m3]
-InternalVariable,Final Zone Design Heating Volume Flow,LIVINGUNIT,[m3/s]
-InternalVariable,Intermediate Zone Design Heating Volume Flow,LIVINGUNIT,[m3/s]
-InternalVariable,Final Zone Design Cooling Volume Flow,LIVINGUNIT,[m3/s]
-InternalVariable,Intermediate Zone Design Cooling Volume Flow,LIVINGUNIT,[m3/s]
-InternalVariable,Zone Outdoor Air Design Volume Flow Rate,LIVINGUNIT,[m3/s]
+InternalVariable,Final Zone Design Heating Air Mass Flow Rate,LIVING_UNIT1,[kg/s]
+InternalVariable,Intermediate Zone Design Heating Air Mass Flow Rate,LIVING_UNIT1,[kg/s]
+InternalVariable,Final Zone Design Cooling Air Mass Flow Rate,LIVING_UNIT1,[kg/s]
+InternalVariable,Intermediate Zone Design Cooling Air Mass Flow Rate,LIVING_UNIT1,[kg/s]
+InternalVariable,Final Zone Design Heating Load,LIVING_UNIT1,[W]
+InternalVariable,Intermediate Zone Design Heating Load,LIVING_UNIT1,[W]
+InternalVariable,Final Zone Design Cooling Load,LIVING_UNIT1,[W]
+InternalVariable,Intermediate Zone Design Cooling Load,LIVING_UNIT1,[W]
+InternalVariable,Final Zone Design Heating Air Density,LIVING_UNIT1,[kg/m3]
+InternalVariable,Intermediate Zone Design Heating Air Density,LIVING_UNIT1,[kg/m3]
+InternalVariable,Final Zone Design Cooling Air Density,LIVING_UNIT1,[kg/m3]
+InternalVariable,Intermediate Zone Design Cooling Air Density,LIVING_UNIT1,[kg/m3]
+InternalVariable,Final Zone Design Heating Volume Flow,LIVING_UNIT1,[m3/s]
+InternalVariable,Intermediate Zone Design Heating Volume Flow,LIVING_UNIT1,[m3/s]
+InternalVariable,Final Zone Design Cooling Volume Flow,LIVING_UNIT1,[m3/s]
+InternalVariable,Intermediate Zone Design Cooling Volume Flow,LIVING_UNIT1,[m3/s]
+InternalVariable,Zone Outdoor Air Design Volume Flow Rate,LIVING_UNIT1,[m3/s]
 InternalVariable,AirTerminal:SingleDuct:ConstantVolume:NoReheat Maximum Mass Flow Rate,ZONEDIRECTAIR_UNIT1,[kg/s]
 InternalVariable,Intermediate Air System Main Supply Volume Flow Rate,CENTRAL SYSTEM_UNIT1,[m3/s]
 InternalVariable,Intermediate Air System Coincident Peak Cooling Mass Flow Rate,CENTRAL SYSTEM_UNIT1,[kg/s]
@@ -1091,40 +1091,40 @@ InternalVariable,Pump Maximum Mass Flow Rate,MAINS PRESSURE_UNIT1,[kg/s]
 **METERS**
 OutputMeter,Electricity:Facility,J
 OutputMeter,Electricity:Building,J
-OutputMeter,Electricity:Zone:LIVINGUNIT,J
+OutputMeter,Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,Electricity:SpaceType:GENERAL,J
 OutputMeter,InteriorLights:Electricity,J
-OutputMeter,InteriorLights:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,InteriorLights:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,InteriorLights:Electricity:SpaceType:GENERAL,J
 OutputMeter,General:InteriorLights:Electricity,J
-OutputMeter,General:InteriorLights:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,General:InteriorLights:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,General:InteriorLights:Electricity:SpaceType:GENERAL,J
 OutputMeter,InteriorEquipment:Electricity,J
-OutputMeter,InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,dishwasher:InteriorEquipment:Electricity,J
-OutputMeter,dishwasher:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,dishwasher:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,dishwasher:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,refrigerator:InteriorEquipment:Electricity,J
-OutputMeter,refrigerator:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,refrigerator:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,refrigerator:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,clotheswasher:InteriorEquipment:Electricity,J
-OutputMeter,clotheswasher:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,clotheswasher:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,clotheswasher:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,electric_dryer:InteriorEquipment:Electricity,J
-OutputMeter,electric_dryer:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,electric_dryer:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,electric_dryer:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,electric_range:InteriorEquipment:Electricity,J
-OutputMeter,electric_range:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,electric_range:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,electric_range:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,television:InteriorEquipment:Electricity,J
-OutputMeter,television:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,television:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,television:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,electric_mels:InteriorEquipment:Electricity,J
-OutputMeter,electric_mels:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,electric_mels:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,electric_mels:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,IECC_adj:InteriorEquipment:Electricity,J
-OutputMeter,IECC_adj:InteriorEquipment:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,IECC_adj:InteriorEquipment:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,IECC_adj:InteriorEquipment:Electricity:SpaceType:GENERAL,J
 OutputMeter,EnergyTransfer:Facility,J
 OutputMeter,EnergyTransfer:HVAC,J
@@ -1141,19 +1141,19 @@ OutputMeter,General:WaterSystems:Electricity,J
 OutputMeter,Fans:Electricity,J
 OutputMeter,General:Fans:Electricity,J
 OutputMeter,Ventilation:Fans:Electricity,J
-OutputMeter,Fans:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,Fans:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,Ventilation (simple):Fans:Electricity,J
-OutputMeter,Ventilation (simple):Fans:Electricity:Zone:LIVINGUNIT,J
+OutputMeter,Ventilation (simple):Fans:Electricity:Zone:LIVING_UNIT1,J
 OutputMeter,EnergyTransfer:Building,J
-OutputMeter,EnergyTransfer:Zone:LIVINGUNIT,J
+OutputMeter,EnergyTransfer:Zone:LIVING_UNIT1,J
 OutputMeter,Heating:EnergyTransfer,J
-OutputMeter,Heating:EnergyTransfer:Zone:LIVINGUNIT,J
+OutputMeter,Heating:EnergyTransfer:Zone:LIVING_UNIT1,J
 OutputMeter,General:Heating:EnergyTransfer,J
-OutputMeter,General:Heating:EnergyTransfer:Zone:LIVINGUNIT,J
+OutputMeter,General:Heating:EnergyTransfer:Zone:LIVING_UNIT1,J
 OutputMeter,Cooling:EnergyTransfer,J
-OutputMeter,Cooling:EnergyTransfer:Zone:LIVINGUNIT,J
+OutputMeter,Cooling:EnergyTransfer:Zone:LIVING_UNIT1,J
 OutputMeter,General:Cooling:EnergyTransfer,J
-OutputMeter,General:Cooling:EnergyTransfer:Zone:LIVINGUNIT,J
+OutputMeter,General:Cooling:EnergyTransfer:Zone:LIVING_UNIT1,J
 OutputMeter,EnergyTransfer:Zone:GARAGE1,J
 OutputMeter,Heating:EnergyTransfer:Zone:GARAGE1,J
 OutputMeter,General:Heating:EnergyTransfer:Zone:GARAGE1,J
@@ -1210,7 +1210,7 @@ OutputMeter,CarbonEquivalentEmissions:Carbon Equivalent,kg
 **VARIABLES**
 OutputVariable,Site Outdoor Air Drybulb Temperature,ENVIRONMENT,C
 OutputVariable,Site Direct Solar Radiation Rate per Area,ENVIRONMENT,W/m2
-OutputVariable,Zone Total Internal Total Heating Rate,LIVINGUNIT,W
+OutputVariable,Zone Total Internal Total Heating Rate,LIVING_UNIT1,W
 OutputVariable,Zone Total Internal Total Heating Rate,GARAGE1,W
 OutputVariable,Zone Total Internal Total Heating Rate,ATTIC_UNIT1,W
 OutputVariable,Lights Electricity Energy,LIVING HARDWIRED LIGHTING1,J
@@ -1240,14 +1240,14 @@ OutputVariable,Fan Electricity Energy,SUPPLY FAN_UNIT1,J
 OutputVariable,Fan Electricity Energy,OASUPPLYFAN_UNIT1,J
 OutputVariable,Fan Electricity Energy,OAEXHAUSTFAN_UNIT1,J
 OutputVariable,Fan Electricity Energy,HEAT PUMP WATER HEATER FAN_UNIT1,J
-OutputVariable,Zone Ventilation Fan Electricity Energy,LIVINGUNIT,J
-OutputVariable,Zone Air Temperature,LIVINGUNIT,C
-OutputVariable,Zone Air System Sensible Heating Energy,LIVINGUNIT,J
-OutputVariable,Zone Air System Sensible Cooling Energy,LIVINGUNIT,J
-OutputVariable,Zone Air System Sensible Heating Rate,LIVINGUNIT,W
-OutputVariable,Zone Air System Sensible Cooling Rate,LIVINGUNIT,W
-OutputVariable,Zone Thermostat Heating Setpoint Temperature,LIVINGUNIT,C
-OutputVariable,Zone Thermostat Cooling Setpoint Temperature,LIVINGUNIT,C
+OutputVariable,Zone Ventilation Fan Electricity Energy,LIVING_UNIT1,J
+OutputVariable,Zone Air Temperature,LIVING_UNIT1,C
+OutputVariable,Zone Air System Sensible Heating Energy,LIVING_UNIT1,J
+OutputVariable,Zone Air System Sensible Cooling Energy,LIVING_UNIT1,J
+OutputVariable,Zone Air System Sensible Heating Rate,LIVING_UNIT1,W
+OutputVariable,Zone Air System Sensible Cooling Rate,LIVING_UNIT1,W
+OutputVariable,Zone Thermostat Heating Setpoint Temperature,LIVING_UNIT1,C
+OutputVariable,Zone Thermostat Cooling Setpoint Temperature,LIVING_UNIT1,C
 OutputVariable,Zone Air Temperature,GARAGE1,C
 OutputVariable,Zone Air System Sensible Heating Energy,GARAGE1,J
 OutputVariable,Zone Air System Sensible Cooling Energy,GARAGE1,J

@@ -104,12 +104,12 @@ def load_data_opti_new(filepath, selected_days):
 
     dict_newindex = { # LIVINGUNIT pour csv année classique  LIVING_UNIT1 dans le csv energyplus baseline (20-24)
         'Environment:Site Outdoor Air Drybulb Temperature [C](TimeStep)': 'Tout',
-        'LIVINGUNIT:Zone Air Temperature [C](TimeStep)': 'Tzone',
-        'LIVINGUNIT:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
-        'LIVINGUNIT:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
+        'LIVING_UNIT1:Zone Air Temperature [C](TimeStep)': 'Tzone',
+        'LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)': 'Heating_living_unit',
+        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)': 'Cooling_living_unit',
         'Fans:Electricity [J](TimeStep)': 'Pfans',
-        'LIVINGUNIT:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
-        'LIVINGUNIT:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
+        'LIVING_UNIT1:Zone Thermostat Heating Setpoint Temperature [C](TimeStep)': 'Tset_heat',
+        'LIVING_UNIT1:Zone Thermostat Cooling Setpoint Temperature [C](TimeStep)': 'Tset_cool',
         'Heating:Electricity [J](TimeStep)': 'P_heating',
         'Cooling:Electricity [J](TimeStep)': 'P_cooling'
     }
@@ -225,25 +225,6 @@ def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=N
 
     df_day['current_price'] = df_day['datetime'].apply(get_price_for_time)
 
-    # Puissance totale électrique (j)
-    p_elec_j = (df_day['Heating:Electricity'] +
-                df_day['Cooling:Electricity'] +
-                df_day['Fans:Electricity'])
-
-    # Coût par ligne = (j / (dtsec*1000)) * dt_heures * Prix_kWh
-    df_day['step_cost_real'] = (p_elec_j /(df_day['dt_seconds'] * 1000)) * df_day['dt_hours'] * df_day['current_price']
-    #cout total
-    total_cost_day_ep = df_day['step_cost_real'].sum()
-
-    # Somme des énergies en Joules sur toutes les lignes du jour
-    total_energy_j = (df_day['Heating:Electricity'] +
-                      df_day['Cooling:Electricity'] +
-                      df_day['Fans:Electricity']).sum()
-    #energie totale en kwh
-    total_energy_kwh = total_energy_j / 3600000
-    #Puissance moyenne sur la journée [W]
-    avg_power_w = total_energy_j / (24 * 3600)
-
     # --- CALCUL OPTIMISATION POUR COMPARAISON ---
     # Énergie théorique (Somme des P_watt * 0.25h / 1000)
     p_tot_opt = np.array(res_opt['P_heating']) + np.array(res_opt['P_cooling'])
@@ -261,7 +242,19 @@ def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=N
 
     df_numeric['P_total_W'] = (df_numeric['Heating:Electricity'] +
                                df_numeric['Cooling:Electricity'] +
-                               df_numeric['Fans:Electricity']) / (df_day['dt_seconds'])
+                               df_numeric['Fans:Electricity']) / 900
+    df_day['step_cost_real'] = (df_numeric['P_total_W'] / 1000.0) * df_day['dt_hours'] * df_day['current_price']
+    total_cost_day_ep = df_day['step_cost_real'].sum()
+
+    # Intégration temporelle stricte pour calculer l'énergie totale du jour en Joules
+    # Énergie [J] = Somme( Puissance [W] * dt [s] )
+    total_energy_j = (df_numeric['P_total_W'] * df_day['dt_seconds']).sum()
+
+    # energie totale en kwh
+    total_energy_kwh = total_energy_j / 3600000
+    # Puissance moyenne sur la journée [W]
+    avg_power_w = total_energy_j / (24 * 3600)
+
     # On fait le resample sur ce DataFrame nettoyé
     df_resampled = df_numeric.resample('15min').mean()
 
@@ -277,7 +270,7 @@ def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=N
     mape_power = np.mean(np.abs((p_real_96 - p_tot_opt) / (p_real_96 + 1e-5))) * 100
 
     # On récupère la température
-    t_real_96 = df_resampled['Zone Air Temperature,livingunit'].iloc[:96].values
+    t_real_96 = df_resampled['Zone Air Temperature,LIVING_UNIT1'].iloc[:96].values
     rmse_temp = np.sqrt(np.mean((t_opt_96 - t_real_96) ** 2))
 
     stats = {
@@ -293,7 +286,7 @@ def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=N
         'P_Avg_Opti_W': avg_power_opt_w,
         'P_Avg_Real_W': avg_power_w
     }
-    return stats, df_day
+    return stats, df_resampled
 
 
 def calculate_average_efficiencies(df_annual):
@@ -486,8 +479,12 @@ def tolatex(runfile):
 
     print("Conversion réussie ! Fichier 'tableau.tex' généré.")
 
-def export_opti_results_to_excel(df_summary, results_all_days, output_path ="opti/Resultats_Optimisation_Detaille.xlsx"):
-    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+def export_opti_results_to_excel(df_summary, results_all_days, output_dir ="opti", output_path = "file.xlsx"):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+
+    with pd.ExcelWriter(Path(output_dir)/output_path, engine='xlsxwriter') as writer:
         # Feuille 1 : Résumé global
         df_summary.to_excel(writer, sheet_name='Resume_Couts', index=False)
 
@@ -601,7 +598,7 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     # --- FIGURE 1 : COMPARAISON TEMPÉRATURES ---
     plt.figure()
     plt.plot(hours_opt, res_opt['T_zone'], 'r--', label="T_zone Opti (Consigne)", linewidth=2)
-    plt.plot(hours_ep, df_cleaned['Zone Air Temperature,livingunit'], 'b-', label="T_zone EnergyPlus (Réel)", alpha=0.8)
+    plt.plot(hours_ep, df_cleaned['Zone Air Temperature,LIVING_UNIT1'], 'b-', label="T_zone EnergyPlus (Réel)", alpha=0.8)
     plt.plot(hours_ep_base, df_baseline['LIVING_UNIT1:Zone Air Temperature [C](TimeStep)'], 'k-', label="Baseline (Thermostat 20-24°C)",
              alpha=0.5)
 
@@ -627,8 +624,8 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     hours_q_opt = np.linspace(0, 24, 96, endpoint=False)
 
     # E+ : Puissance thermique réelle (Sensible Heating - Sensible Cooling)
-    q_real = df_cleaned['Zone Air System Sensible Heating Rate,livingunit'] - \
-             df_cleaned['Zone Air System Sensible Cooling Rate,livingunit']
+    q_real = df_cleaned['Zone Air System Sensible Heating Rate,LIVING_UNIT1'] - \
+             df_cleaned['Zone Air System Sensible Cooling Rate,LIVING_UNIT1']
     q_real_base = df_baseline['LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)'] - df_baseline[
         'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)']
     plt.figure()
@@ -655,7 +652,7 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
 
     # EnergyPlus : Conversion Joules -> Watts moyen sur l'intervalle
     # P [W] = Energie [J] / dt [s]
-    dt_sec = df_cleaned['dt_hours'] * 3600
+    dt_sec = 900
     p_heat_ep = df_cleaned['Heating:Electricity'] / dt_sec
     p_cool_ep = -df_cleaned['Cooling:Electricity'] / dt_sec
 
@@ -811,4 +808,4 @@ def analyze_variable_timestep_results_sans_opti(day_str, results_all_days, csv_d
         'Energy_Real_kWh': total_energy_kwh,
         'P_Avg_Real_W': avg_power_w
     }
-    return stats, df_day
+    return stats, df_resampled

@@ -71,19 +71,19 @@ class BuildingModel:
         self.fullsimulation = None
         self.simulation = None
         self.simulationvariables = [
-    "OutputVariable,Zone Air Temperature,livingunit",
+    "OutputVariable,Zone Air Temperature,LIVING_UNIT1",
     "OutputVariable,Site Outdoor Air Drybulb Temperature,ENVIRONMENT",
-    "OutputVariable,Zone Air System Sensible Heating Rate,livingunit",
-    "OutputVariable,Zone Air System Sensible Cooling Rate,livingunit",
+    "OutputVariable,Zone Air System Sensible Heating Rate,LIVING_UNIT1",
+    "OutputVariable,Zone Air System Sensible Cooling Rate,LIVING_UNIT1", #LIVING_UNIT1 OU livingunit
     "OutputMeter,Electricity:Building",
     "OutputMeter,Electricity:HVAC",
     "OutputMeter,Heating:Electricity",
     "OutputMeter,Cooling:Electricity",
     "OutputMeter,Fans:Electricity",
-    "OutputVariable,Zone Thermostat Heating Setpoint Temperature,livingunit",
-    "OutputVariable,Zone Thermostat Cooling Setpoint Temperature,livingunit",
-    "Actuator,Zone Temperature Control,Heating Setpoint,LIVINGUNIT",
-    "Actuator,Zone Temperature Control,Cooling Setpoint,LIVINGUNIT"
+    "OutputVariable,Zone Thermostat Heating Setpoint Temperature,LIVING_UNIT1",
+    "OutputVariable,Zone Thermostat Cooling Setpoint Temperature,LIVING_UNIT1",
+    "Actuator,Zone Temperature Control,Heating Setpoint,LIVING_UNIT1",
+    "Actuator,Zone Temperature Control,Cooling Setpoint,LIVING_UNIT1"
 
     #"Actuator,Schedule:Constant,Schedule Value,heating_sch", # Nom de ton schedule chauffage
     #"Actuator,Schedule:Constant,Schedule Value,cooling_sch"  # Nom de ton schedule clim
@@ -413,13 +413,13 @@ class MediumOffice(BuildingModel):
         # path to the weather file
         # path to the adjacency matrix
         #adjacency_matrix_path = folderpath / "zone_adjacency_matrix.csv"
-        idf_path = "dataset/ModeleHabitation/anneeClassique/model_annee_classique_exp.idf"
+        idf_path = "opti/EPlus_run_20_24/model_annee_classique_20_24_exp.idf" #dataset/ModeleHabitation/anneeClassique/model_annee_classique_exp.idf avant j'utilisais celui-là
         epw_path =  "dataset/Meteo/Brussels.Natl.AP_BEL.epw"
         output_folderpath = "opti/bat"
 
         # 1. Définition des 3 zones de ton IDF
         zone_data = {
-            'zone': ['LIVINGUNIT', 'ATTIC_UNIT1', 'GARAGE1'],
+            'zone': ['LIVING_UNIT1', 'ATTIC_UNIT1', 'GARAGE1'], # LIVINGUNIT ou LIVING_UNIT1
             'floor': [0, 1, 0],  # Étages indicatifs
             'acu': ['ZONEDIRECTAIR_UNIT1 ADU', None, None]  # Seul LIVING_UNIT1 est piloté
         }
