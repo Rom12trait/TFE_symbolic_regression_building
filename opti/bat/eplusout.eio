@@ -1,4 +1,4 @@
-Program Version,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.05.13 17:18
+Program Version,EnergyPlus, Version 25.1.0-68a4a7c774, YMD=2026.06.23 11:18
 ! <Version>, Version ID
  Version, 25.1
 ! <Timesteps per Hour>, #TimeSteps, Minutes per TimeStep {minutes}
@@ -367,27 +367,3 @@ Environment:Daylight Saving,No,SizingPeriod:DesignDay
 ! <Environment:Design Day Misc>,DayOfYear,ASHRAE A Coeff,ASHRAE B Coeff,ASHRAE C Coeff,Solar Constant-Annual Variation,Eq of Time {minutes}, Solar Declination Angle {deg}, Solar Model
 Environment:Design Day Data,29.60,10.70,DefaultMultipliers,Wetbulb,20.50,{C},101217,240,3.5,1.00,No,No
 Environment:Design Day Misc,208,1086.1,0.2080,0.1354,1.0,-6.42,19.4,ASHRAEClearSky
-Environment:WarmupDays, 10
-! <Tabular Report>,Style,Unit Conversion
-Tabular Report,Commaandhtml,commaandhtml
-! <Warmup Convergence Information>,Zone Name,Environment Type/Name,Average Warmup Temperature Difference {deltaC},Std Dev Warmup Temperature Difference {deltaC},Max Temperature Pass/Fail Convergence,Min Temperature Pass/Fail Convergence,Average Warmup Load Difference {W},Std Dev Warmup Load Difference {W},Heating Load Pass/Fail Convergence,Cooling Load Pass/Fail Convergence
- Warmup Convergence Information,LIVING_UNIT1,SizingPeriod: BRUSSELS ANNUAL COOLING 1% CONDNS DB=>MWB,1.2615144463E-003,2.5661139465E-003,Pass,Pass,7.2976855274E-002,6.3190811422E-002,Pass,Pass
- Warmup Convergence Information,GARAGE1,SizingPeriod: BRUSSELS ANNUAL COOLING 1% CONDNS DB=>MWB,0.5532188562,0.4521786124,Pass,Pass,0.0000000000,0.0000000000,Pass,Pass
- Warmup Convergence Information,ATTIC_UNIT1,SizingPeriod: BRUSSELS ANNUAL COOLING 1% CONDNS DB=>MWB,0.3487840452,0.2434305859,Pass,Pass,0.0000000000,0.0000000000,Pass,Pass
-Environment,BRUSSELS ANNUAL HEATING 99.6% CONDNS DB,SizingPeriod:DesignDay,01/15,01/15,WinterDesignDay,1,N/A,N/A,N/A,N/A,N/A,N/A,Clark and Allen
-Environment:Daylight Saving,No,SizingPeriod:DesignDay
-Environment:Design Day Data,-6.80,0.00,DefaultMultipliers,Wetbulb,-7.70,{C},101217,220,3.7,0.00,No,No
-Environment:Design Day Misc, 15,1230.6,0.1413,5.6936E-002,1.0,-9.21,-21.3,ASHRAEClearSky
-Environment:WarmupDays, 10
- Warmup Convergence Information,LIVING_UNIT1,SizingPeriod: BRUSSELS ANNUAL HEATING 99.6% CONDNS DB,4.6738851298E-005,1.0848004480E-004,Pass,Pass,5.4839424865E-003,9.3450848146E-003,Pass,Pass
- Warmup Convergence Information,GARAGE1,SizingPeriod: BRUSSELS ANNUAL HEATING 99.6% CONDNS DB,1.5100813421E-003,3.8834932822E-003,Pass,Pass,0.0000000000,0.0000000000,Pass,Pass
- Warmup Convergence Information,ATTIC_UNIT1,SizingPeriod: BRUSSELS ANNUAL HEATING 99.6% CONDNS DB,8.7828698220E-004,1.3306881428E-003,Pass,Pass,0.0000000000,0.0000000000,Pass,Pass
-Environment,ANNUAL,WeatherFileRunPeriod,12/19/2010,12/24/2010,Sunday,6,Use RunPeriod Specified Day,Yes,Yes,No,Yes,Yes,Clark and Allen
-Environment:Daylight Saving,No,
-Environment:WarmupDays, 10
- Warmup Convergence Information,LIVING_UNIT1,RunPeriod: ANNUAL,4.2380486861E-003,7.4269245750E-003,Pass,Pass,3.1375745291E-002,3.5492094341E-002,Pass,Pass
- Warmup Convergence Information,GARAGE1,RunPeriod: ANNUAL,0.1220365874,0.1185487720,Pass,Pass,0.0000000000,0.0000000000,Pass,Pass
- Warmup Convergence Information,ATTIC_UNIT1,RunPeriod: ANNUAL,0.1343981750,0.1052240712,Pass,Pass,0.0000000000,0.0000000000,Pass,Pass
-! <Program Control Information:Threads/Parallel Sims>, Threading Supported,Maximum Number of Threads, Env Set Threads (OMP_NUM_THREADS), EP Env Set Threads (EP_OMP_NUM_THREADS), IDF Set Threads, Number of Threads Used (Interior Radiant Exchange), Number Nominal Surfaces, Number Parallel Sims
-Program Control:Threads/Parallel Sims, No,1, N/A, N/A, N/A, N/A, N/A, N/A
-End of Data

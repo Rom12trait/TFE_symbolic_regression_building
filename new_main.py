@@ -1,7 +1,8 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
+
 import importlib
 from src import communs
 from src import physical_models
@@ -21,10 +22,17 @@ from src.api_validator import EnergyPlusValidator
 from src.building_model import MediumOffice
 
 
-
 runfile="LinearV2_annee_dyn" #LinearV2_annee_classique" #LinearV2_annee_dyn
 yeartype = 'dynamique' #ou 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
 version = 'V4'
+name = "Linear"
+
+names = ["Quadratic"] #"Linear", "PySR"
+runfiles = [ "LinearV2_annee_dyn"] # Tes 2 dossiers d'années "LinearV2_annee_classique",
+file_paths = ["Validation_EPlus_VS_Opti", "Validation_EPlus_sans_Opti"]
+
+
+
 #run_dir = communs.create_run_folder("run_2","results")
 randomstate=42
 #Charger les données
@@ -45,18 +53,19 @@ y = df["Tzone_next"].values
 #y_test = df_test["Tzone_next"].values
 
 #normalement x_val et y_val
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=randomstate)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=randomstate, shuffle=False)
 
 
 # 2. INSTANCIATION DES MODÈLES
 models = {
     #"RC": physical_models.RCModel(R=0.008636689, C=27.14e6),
     #"Linear": regression_models.PolynomialThermalModel(degree=1),
-    #"Quadratic": regression_models.PolynomialThermalModel(degree=2),
-    "PySR": symbolic_models.PySRThermalModel(niterations=80)
+    #"Quadratic": regression_models.RestrictedQuadraticModel(),  #regression_models.PolynomialThermalModel(degree=2),
+    #"PySR": symbolic_models.PySRThermalModel(niterations=80),
+    "PySR_non": symbolic_models.PySRThermalModel(niterations=150)
 }
 
-#%%
+
 for name, model in models.items():
     print(f"\n>>> Modèle : {name}")
 
@@ -141,12 +150,15 @@ for name, model in models.items():
         t_init = data_12days[day]['Tzone_real'][0]  # Première valeur
 
         # Résolution automatique (détecte si Gurobi ou Ipopt est requis)
-        model_resolved, _ = optimizer.solve(prices, tout, t_init, year = yeartype)
+        model_resolved, _ = optimizer.solve(prices, tout, t_init, year = yeartype, mode = "nonlinear")
 
         # 3. Extraction des vecteurs de résultats
         p_heat_opt = [pyo.value(model_resolved.P_heating[t]) for t in model_resolved.T]
         p_cool_opt = [pyo.value(model_resolved.P_cooling[t]) for t in model_resolved.T]
         t_zone_opt = [pyo.value(model_resolved.T_zone[t]) for t in model_resolved.T_instants]
+        borne_low = [pyo.value(model_resolved.low_borne[t]) for t in model_resolved.T]
+        borne_high = [pyo.value(model_resolved.high_borne[t]) for t in model_resolved.T]
+
         total_cost = pyo.value(model_resolved.real_cost)
 
         step_costs = (np.array(prices) * (np.array(p_heat_opt) + np.array(p_cool_opt)) / 1000 * 0.25)
@@ -156,6 +168,8 @@ for name, model in models.items():
             'P_cooling': p_cool_opt,
             'T_zone': t_zone_opt,
             'T_real': data_12days[day]['Tzone_real'],
+            'T_borne_low': borne_low,
+            'T_borne_high': borne_high,
             'Step_Costs': list(step_costs),
             'total_Cost': total_cost,
             'Prices': prices,
@@ -220,5 +234,11 @@ for name, model in models.items():
             print(f"{day} | Coût E+: {stats['Cost_Real']:.2f}€ vs Opti: {stats['Cost_Opti']:.2f}€")
         except Exception as e:
             print(f"Erreur sur {day}: {e}")
+    communs.plot_global_costs_bar_chart(all_stats_list, all_stats_list_sans_opti, name=name, runfile=runfile, output_dir=f"api{version}/{name}_{runfile}")
     communs.export_validation_to_excel(all_stats_list,all_df_days_dict, output_path=f"api{version}/{name}_{runfile}/Validation_EPlus_VS_Opti.xlsx")
     communs.export_validation_to_excel(all_stats_list_sans_opti, all_df_days_dict_sans_opti, output_path=f"api{version}/{name}_{runfile}/Validation_EPlus_sans_Opti.xlsx")
+#%%
+#for name in names:
+ #   for runfile in runfiles:
+  #      for file_path in file_paths:
+    #        communs.to_latex(version, name, runfile, file_path)

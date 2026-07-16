@@ -1,4 +1,5 @@
 import numpy as np
+import sympy as sp
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
@@ -184,109 +185,6 @@ def load_data_api(filepath):
     df.set_index('datetime', inplace=True)
     data_annual = df.sort_index()
     return data_annual
-
-
-def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=None):
-    """
-    Analyse les résultats E+ à pas de temps variables et les compare à l'opti.
-    """
-    csv_path = os.path.join(csv_dir, f"validation_EP_{name}_{day_str}.csv")
-    df = pd.read_csv(csv_path, sep=';')
-
-    # --- ÉTAPE DE CORRECTION DU TIMESTEP ---
-    # On remplace "02/29" par "03/01" uniquement dans la colonne Timestep
-    # pour que Pandas accepte de le lire en année 2017
-    df['Timestep'] = df['Timestep'].str.replace("02/29", "03/01")
-    # 1. Conversion du temps en datetime (en forçant l'année 2017 pour matcher l'API)
-    # colonne timestep (format "MM/DD HH:MM")
-    df['datetime'] = pd.to_datetime("2017/" + df['Timestep'], format="%Y/%m/%d %H:%M")
-
-    # 2. Filtrer pour ne garder que le jour d'intérêt (exclure le warmup)
-    target_date = pd.to_datetime(day_str).replace(year=2017)
-    df_day = df[df['datetime'].dt.date == target_date.date()].copy()
-
-    # 3. Calcul du dt réel en heures pour chaque ligne
-    # On calcule la différence de temps avec la ligne suivante
-    df_day['dt_hours'] = df_day['datetime'].diff().dt.total_seconds().shift(-1) / 3600
-    # La dernière ligne n'a pas de suivante, on peut mettre 0.25 (15 min) par défaut
-    df_day['dt_hours'].fillna(0.25, inplace=True)
-    df_day['dt_seconds'] = df_day['dt_hours'] * 3600
-
-    # 4. Calcul du coût réel avec prix dynamique
-    # Il faut mapper le prix de l'optimisation (qui est fixe par 15min)
-    # sur chaque micro-pas de temps de EnergyPlus
-    res_opt = results_all_days[day_str]
-    prices_96 = res_opt['Prices']  # Liste de 96 prix
-
-    def get_price_for_time(dt):
-        # Calcule l'index (0-95) dans le vecteur de prix basé sur l'heure/minute
-        idx = int((dt.hour * 60 + dt.minute) // 15)
-        return prices_96[min(idx, 95)]
-
-    df_day['current_price'] = df_day['datetime'].apply(get_price_for_time)
-
-    # --- CALCUL OPTIMISATION POUR COMPARAISON ---
-    # Énergie théorique (Somme des P_watt * 0.25h / 1000)
-    p_tot_opt = np.array(res_opt['P_heating']) + np.array(res_opt['P_cooling'])
-    energy_opt_kwh = (p_tot_opt * 0.25).sum() / 1000
-    avg_power_opt_w = p_tot_opt.mean()  # Moyenne simple des 96 points
-
-    # Rééchantillonnage pour la température (RMSE propre)
-    # On prend la moyenne de température sur chaque 15 min pour comparer à l'opti
-    t_opt_96 = np.array(res_opt['T_zone'][:96])
-    # On définit l'index sur le temps
-    df_day = df_day.set_index('datetime')
-    # On ne sélectionne QUE les colonnes de type numérique (int ou float)
-    # Cela exclut automatiquement 'Timestep' (string) et 'Warmup' (bool)
-    df_numeric = df_day.select_dtypes(include=[np.number])
-
-    df_numeric['P_total_W'] = (df_numeric['Heating:Electricity'] +
-                               df_numeric['Cooling:Electricity'] +
-                               df_numeric['Fans:Electricity']) / 900
-    df_day['step_cost_real'] = (df_numeric['P_total_W'] / 1000.0) * df_day['dt_hours'] * df_day['current_price']
-    total_cost_day_ep = df_day['step_cost_real'].sum()
-
-    # Intégration temporelle stricte pour calculer l'énergie totale du jour en Joules
-    # Énergie [J] = Somme( Puissance [W] * dt [s] )
-    total_energy_j = (df_numeric['P_total_W'] * df_day['dt_seconds']).sum()
-
-    # energie totale en kwh
-    total_energy_kwh = total_energy_j / 3600000
-    # Puissance moyenne sur la journée [W]
-    avg_power_w = total_energy_j / (24 * 3600)
-
-    # On fait le resample sur ce DataFrame nettoyé
-    df_resampled = df_numeric.resample('15min').mean()
-
-    # Extraction des vecteurs 96 points
-    p_real_96 = df_resampled['P_total_W'].iloc[:96].fillna(0).values
-
-    # RMSE Puissance [W]
-    rmse_power = np.sqrt(np.mean((p_tot_opt - p_real_96) ** 2))
-
-    # MAPE Puissance [%]
-    # Note : On ajoute un petit epsilon (1e-5) au dénominateur pour éviter la division par zéro
-    # si le système est éteint (0W).
-    mape_power = np.mean(np.abs((p_real_96 - p_tot_opt) / (p_real_96 + 1e-5))) * 100
-
-    # On récupère la température
-    t_real_96 = df_resampled['Zone Air Temperature,LIVING_UNIT1'].iloc[:96].values
-    rmse_temp = np.sqrt(np.mean((t_opt_96 - t_real_96) ** 2))
-
-    stats = {
-        'Day': day_str,
-        'Cost_Opti': res_opt['total_Cost'],
-        'Cost_Real': total_cost_day_ep,
-        'Difference_Euro': total_cost_day_ep - res_opt['total_Cost'],
-        'RMSE_Temp': rmse_temp,
-        'RMSE_Power_W': rmse_power,
-        'MAPE_Power_Pct': mape_power,
-        'Energy_Opti_kWh': energy_opt_kwh,
-        'Energy_Real_kWh': total_energy_kwh,
-        'P_Avg_Opti_W': avg_power_opt_w,
-        'P_Avg_Real_W': avg_power_w
-    }
-    return stats, df_resampled
 
 
 def calculate_average_efficiencies(df_annual):
@@ -479,6 +377,57 @@ def tolatex(runfile):
 
     print("Conversion réussie ! Fichier 'tableau.tex' généré.")
 
+def to_latex(version, name, runfile, file_path):
+
+    df = pd.read_excel(f"api{version}/{name}_{runfile}/{file_path}.xlsx", sheet_name=0)
+    if file_path == "Validation_EPlus_VS_Opti":
+        colonnes_cibles = ['Day', 'Cost_Opti', 'Cost_Real', 'Difference_Euro', 'RMSE_Temp', 'RMSE_Power_W',
+                       'MAPE_Power_Pct', 'Energy_Opti_kWh', 'Energy_Real_kWh']
+    else:
+        colonnes_cibles = ['Day', 'Cost_Real', 'RMSE_Temp', 'RMSE_Power_W',
+                           'MAPE_Power_Pct', 'Energy_Real_kWh']
+    df = df[colonnes_cibles]
+    df.columns = [
+        str(c).replace('_', ' ')
+        .replace('Temperature', 'Temp.')
+        .replace('Power Pct', 'P (%)')
+        .replace('Difference', 'Diff.')
+        .replace('Euro', '€')
+        .replace('Energy', 'Energ')
+        .replace('Real', 'ex-post')
+        for c in df.columns
+    ]
+    num_cols = len(df.columns)
+
+    # On crée un format : la première colonne (Day) est alignée à gauche (l),
+    # toutes les autres sont des colonnes fines centrées à largeur automatique.
+    column_format = "l" + "c" * (num_cols - 1)
+
+
+    # 2. Convertir en LaTeX
+    # index=False pour ne pas inclure la numérotation des lignes
+    latex_code = df.to_latex(
+        index=False,
+        caption=f"Métriques globales - Modèle {name} ({runfile})",
+        label=f"tab:{name}_{runfile}_{file_path}",
+        float_format = "%.2f",
+        column_format=column_format  # On force l'alignement serré
+    )
+    latex_code = latex_code.replace(
+        "\\begin{tabular}",
+        "\\begin{small}\n\\begin{tabular}"
+    )
+    latex_code = latex_code.replace(
+        "\\end{tabular}",
+        "\\end{tabular}\n\\end{small}"
+    )
+    # ou float_format = "%.3f" dans to_latex
+    # 3. Sauvegarder dans un fichier .tex
+    with open(f"api{version}/{name}_{runfile}/{file_path}.tex", "w", encoding="utf-8") as f:
+        f.write(latex_code)
+
+    print("Conversion réussie ! Fichier 'tableau.tex' généré.")
+
 def export_opti_results_to_excel(df_summary, results_all_days, output_dir ="opti", output_path = "file.xlsx"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -498,7 +447,9 @@ def export_opti_results_to_excel(df_summary, results_all_days, output_dir ="opti
                 'P_heating_[W]': values['P_heating'] + [np.nan],
                 'P_cooling_[W]': values['P_cooling'] + [np.nan],
                 'Prix_[EUR/kWh]': list(values['Prices']) + [np.nan],
-                'Cout_Instant_[EUR]': values['Step_Costs'] + [np.nan]
+                'Cout_Instant_[EUR]': values['Step_Costs'] + [np.nan],
+                'T_borne_low': values['T_borne_low'] + [np.nan],
+                'T_borne_high': values['T_borne_high'] + [np.nan]
             }
 
             df_day = pd.DataFrame(data_day)
@@ -517,18 +468,18 @@ def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
 
     # Paramètres communs
     res = results_all_days[day]
-    hours97 = np.linspace(0,24,97)
-    hours = np.linspace(0, 24, 96)
+    hours_p_opt_post = np.arange(0, 24, 0.25)
+    hours_t_opt = np.arange(0, 24.25, 0.25)
     xticks = np.arange(0, 25, 2)
     Ph_max, Pc_max = res['P_h_max'], res['P_c_max']
-    tmin, tmax = res['T_min'], res['T_max']
+    tmin, tmax = res['T_borne_low'], res['T_borne_high']
 
     # --- 1. FIGURE TEMPÉRATURES ---
     plt.figure()
-    plt.plot(hours97, res['T_zone'], color='blue', label=f"T_zone {day}", linewidth=2.5)
-    plt.axhline(y=tmin, color='green', linestyle='--', alpha=0.5, label=" T_min")
-    plt.axhline(y=tmax, color='red', linestyle='--', alpha=0.5, label="T_max")
-    plt.title(f"Analyse Thermique - {day}")
+    plt.plot(hours_t_opt, res['T_zone'], color='blue', label=f"T_zone {day}", linewidth=2.5)
+    plt.plot(hours_p_opt_post, tmin, color='green', linestyle='--', alpha=0.5, label="T_min")
+    plt.plot(hours_p_opt_post, tmax, color='red', linestyle='--', alpha=0.5, label="T_max")
+    plt.title(f"Courbe de température zone - {day}")
     plt.ylabel("Température [°C]")
     plt.xlabel("Heure [h]")
     plt.xticks(xticks)
@@ -539,9 +490,13 @@ def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
     plt.close()  # Ferme la figure pour libérer la RAM
 
     # --- 2. FIGURE PUISSANCES HVAC ---
+
+    p_heat_opt_97 = np.append(res['P_heating'], res['P_heating'][-1])
+    p_cool_opt_97 = np.append(-np.array(res['P_cooling']), -res['P_cooling'][-1])
+
     plt.figure() #figsize=(10, 5)
-    p_net = np.array(res['P_heating']) - np.array(res['P_cooling'])
-    plt.step(hours, p_net, where='post', color='orange', label="P_net (heating > 0 et cooling < 0)", linewidth=2)
+    p_net = np.array(p_heat_opt_97 - p_cool_opt_97)
+    plt.step(hours_t_opt, p_net, where='post', color='orange', label="P_net (heating > 0 et cooling < 0)", linewidth=2)
     plt.axhline(y=Ph_max, color='red', linestyle='--', alpha=0.3, label="P_max Heat")
     plt.axhline(y=-Pc_max, color='blue', linestyle='--', alpha=0.3, label="P_max Cool")
     plt.title(f"Profil Puissance HVAC - {day}")
@@ -558,10 +513,11 @@ def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
     plt.figure()
     p_tot = np.array(res['P_heating']) + np.array(res['P_cooling'])
     step_costs = (res['Prices'] * p_tot / 1000 * 0.25)
-
-    plt.step(hours, res['Prices'], where='post', color='blue', linewidth=1.5, label="Prix marché [€/kWh]")
-    plt.step(hours, step_costs, where='post', color='black', alpha=0.7, linewidth=2, label="Coût [€/15min]")
-    plt.fill_between(hours, step_costs, step='post', color='black', alpha=0.1)
+    step_costs = np.append(step_costs, step_costs[-1])
+    res['Prices'] = np.append(res['Prices'], res['Prices'][-1])
+    plt.step(hours_t_opt, res['Prices'], where='post', color='blue', linewidth=1.5, label="Prix marché [€/kWh]")
+    plt.step(hours_t_opt, step_costs, where='post', color='black', alpha=0.7, linewidth=2, label="Coût [€/15min]")
+    plt.fill_between(hours_t_opt, step_costs, step='post', color='black', alpha=0.1)
 
     plt.title(f"Analyse Économique - {day}")
     plt.ylabel("Valeur [€]")
@@ -579,119 +535,206 @@ def save_plot_day(day, results_all_days, output_dir="opti/results_image"):
 def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, output_dir=None):
     """
     Génère les graphiques comparatifs en utilisant le DataFrame déjà filtré.
+    attention energyplus donne les températures instantanné au timestep mais les puissances sont pour l'intervalle précédent.
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    # --- préparation des axes temporels
+    hours_97 = np.arange(0, 24.25, 0.25)
 
-    # Pour l'opti (97 points de 0h à 24h)
-    hours_opt = np.linspace(0, 24, 97)
-    hours_p_opt = np.linspace(0, 24, 96)
-    # --- Axes X ---
-    time_source = df_cleaned.index if not 'datetime' in df_cleaned.columns else df_cleaned['datetime']
-    # Pour EnergyPlus (on utilise les heures réelles du DataFrame nettoyé)
-    hours_ep = time_source.hour + time_source.minute / 60 + time_source.second / 3600
-    # Pour EnergyPlus Baseline
-    time_base = df_baseline.index if not 'datetime' in df_baseline.columns else df_baseline['datetime']
-    hours_ep_base = time_base.hour + time_base.minute / 60 + time_base.second / 3600
+    # Pour l'optimisation
+    t_opt_97 = res_opt['T_zone'][:97]
+    # Pour EnergyPlus Réel et Baseline
+    t_real_97 = df_cleaned['Zone Air Temperature,LIVING_UNIT1'].iloc[:97].values
+    t_base_97 = df_baseline['LIVING_UNIT1:Zone Air Temperature [C](TimeStep)'].iloc[:97].values
 
-    # --- FIGURE 1 : COMPARAISON TEMPÉRATURES ---
+    # Extension des bornes de confort floues (Slacks) de 96 à 97 points pour le style 'post'
+    low_borne_97 = np.append(res_opt['T_borne_low'], res_opt['T_borne_low'][-1])
+    high_borne_97 = np.append(res_opt['T_borne_high'], res_opt['T_borne_high'][-1])
+
+    # --- PUISSANCES ET FLUX (Données d'intervalles : 96 pas rééchantillonnés par le DEBUT de l'intervalle) ---
+    # On force le rééchantillonnage avec label='left' pour que la consommation de l'intervalle (ex: lue à 00:15)
+    # soit correctement positionnée à son heure de début (00:00) sur l'axe X.
+    df_resampled_real = df_cleaned.resample('15min', label='left').mean().iloc[:96]
+    df_resampled_base = df_baseline.resample('15min', label='left').mean().iloc[:96]
+
+    # Figure 2 : Flux thermiques (Q_hvac) - 96 points étendus à 97 pour le tracé 'post'
+    q_opt_96 = (1.86 * np.array(res_opt['P_heating'])) - (3.73 * np.array(res_opt['P_cooling']))
+    q_opt_97 = np.append(q_opt_96, q_opt_96[-1])
+
+    q_real_96 = (df_resampled_real['Zone Air System Sensible Heating Rate,LIVING_UNIT1'] -
+                 df_resampled_real['Zone Air System Sensible Cooling Rate,LIVING_UNIT1']).values
+    q_real_97 = np.append(q_real_96, q_real_96[-1])
+
+    q_base_96 = (df_resampled_base['LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)'] -
+                 df_resampled_base['LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)']).values
+    q_base_97 = np.append(q_base_96, q_base_96[-1])
+
+    # Figure 3 : Puissances électriques - 96 points étendus à 97 pour le tracé 'post'
+    p_heat_opt_97 = np.append(res_opt['P_heating'], res_opt['P_heating'][-1])
+    p_cool_opt_97 = np.append(-np.array(res_opt['P_cooling']), -res_opt['P_cooling'][-1])
+
+    dt_sec = 900
+    p_heat_ep_96 = (df_resampled_real['Heating:Electricity'] / dt_sec).values
+    p_cool_ep_96 = -(df_resampled_real['Cooling:Electricity'] / dt_sec).values
+    p_heat_ep_97 = np.append(p_heat_ep_96, p_heat_ep_96[-1])
+    p_cool_ep_97 = np.append(p_cool_ep_96, p_cool_ep_96[-1])
+
+    p_heat_base_96 = (df_resampled_base['Heating:Electricity [J](TimeStep)'] / dt_sec).values
+    p_cool_base_96 = -(df_resampled_base['Cooling:Electricity [J](TimeStep)'] / dt_sec).values
+    p_heat_base_97 = np.append(p_heat_base_96, p_heat_base_96[-1])
+    p_cool_base_97 = np.append(p_cool_base_96, p_cool_base_96[-1])
+
+    # Figure 4 : Coûts au quart d'heure - 96 points étendus à 97 pour le tracé 'post'
+    cost_opt_97 = np.append(res_opt['Step_Costs'], res_opt['Step_Costs'][-1])
+    cost_real_97 = np.append(df_resampled_real['step_cost_real'].values, df_resampled_real['step_cost_real'].values[-1])
+    cost_base_97 = np.append(df_resampled_base['step_cost_real'].values, df_resampled_base['step_cost_real'].values[-1])
+
+
+    #--- création graphes ---
+    # --- FIGURE 1 : COMPARAISON TEMPÉRATURES ET BORNES DYNAMIQUES (SLACKS) ---
     plt.figure()
-    plt.plot(hours_opt, res_opt['T_zone'], 'r--', label="T_zone Opti (Consigne)", linewidth=2)
-    plt.plot(hours_ep, df_cleaned['Zone Air Temperature,LIVING_UNIT1'], 'b-', label="T_zone EnergyPlus (Réel)", alpha=0.8)
-    plt.plot(hours_ep_base, df_baseline['LIVING_UNIT1:Zone Air Temperature [C](TimeStep)'], 'k-', label="Baseline (Thermostat 20-24°C)",
-             alpha=0.5)
+    plt.plot(hours_97, t_opt_97, 'r--', label="T_zone Opti (Consigne)", linewidth=2)
+    plt.plot(hours_97, t_real_97, 'b-', label="T_zone EnergyPlus (Réel Ex-post)", alpha=0.8)
+    plt.plot(hours_97, t_base_97, 'k-', label="Baseline (Thermostat Standard)", alpha=0.4)
 
-    plt.axhline(res_opt['T_min'], color='grey', linestyle=':', alpha=0.5, label="Bornes Confort")
-    plt.axhline(res_opt['T_max'], color='grey', linestyle=':', alpha=0.5)
+    # Bornes en escalier (slacks incluses) qui s'étirent proprement jusqu'à 24h00
+    plt.step(hours_97, low_borne_97, where='post', color='darkred', linestyle=':', alpha=0.6,
+             label="Bornes Confort Dynamiques")
+    plt.step(hours_97, high_borne_97, where='post', color='darkred', linestyle=':', alpha=0.6)
 
-    plt.title(f"Courbes Températures - {day_str}")
+    plt.title(f"Profils des Températures de Zone - {day_str}", fontweight='bold')
     plt.ylabel("Température [°C]")
     plt.xlabel("Heure [h]")
+    plt.xlim(0, 24)
     plt.xticks(np.arange(0, 25, 2))
-    plt.legend(loc='best')
-    plt.grid(True, linestyle=':', alpha=0.6)
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/Comp_Temp_{day_str}.pdf")
-    plt.savefig(f"{output_dir}/Comp_Temp_{day_str}.png")
-    plt.close()
-
-    # --- FIGURE 2 : COMPARAISON PUISSANCES THERMIQUES (Q_hvac) ---
-
-    # Opti : Puissance thermique théorique (96 points)
-    # On utilise tes rendements : eta_h=1.86, eta_c=3.73
-    q_opt = (1.86 * np.array(res_opt['P_heating'])) - (3.73 * np.array(res_opt['P_cooling']))
-    hours_q_opt = np.linspace(0, 24, 96, endpoint=False)
-
-    # E+ : Puissance thermique réelle (Sensible Heating - Sensible Cooling)
-    q_real = df_cleaned['Zone Air System Sensible Heating Rate,LIVING_UNIT1'] - \
-             df_cleaned['Zone Air System Sensible Cooling Rate,LIVING_UNIT1']
-    q_real_base = df_baseline['LIVING_UNIT1:Zone Air System Sensible Heating Rate [W](TimeStep)'] - df_baseline[
-        'LIVING_UNIT1:Zone Air System Sensible Cooling Rate [W](TimeStep)']
-    plt.figure()
-    plt.step(hours_q_opt, q_opt, where='post', label="Q_hvac Opti (Théorique)", color='red', alpha=0.6)
-    plt.plot(hours_ep, q_real, label="Q_hvac EnergyPlus (Réel)", color='blue', alpha=0.7)
-    plt.plot(hours_ep_base, q_real_base, 'k-', label="Q Baseline", alpha=0.4)
-
-    plt.title(f"Courbes Flux Thermique - {day_str}")
-    plt.ylabel("Puissance Thermique [W]")
-    plt.xlabel("Heure [h]")
-    plt.xticks(np.arange(0, 25, 2))
-    plt.axhline(0, color='black', linewidth=0.8, alpha=0.3)
-    plt.legend(loc='best')
-    plt.grid(True, linestyle=':', alpha=0.6)
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/Comp_Power_{day_str}.pdf")
-    plt.savefig(f"{output_dir}/Comp_Power_{day_str}.png")
-    plt.close()
-
-    # --- Figure 3 Power ---
-    # Opti : P_heat positif, P_cool négatif
-    p_heat_opt = np.array(res_opt['P_heating'])
-    p_cool_opt = -np.array(res_opt['P_cooling'])
-
-    # EnergyPlus : Conversion Joules -> Watts moyen sur l'intervalle
-    # P [W] = Energie [J] / dt [s]
-    dt_sec = 900
-    p_heat_ep = df_cleaned['Heating:Electricity'] / dt_sec
-    p_cool_ep = -df_cleaned['Cooling:Electricity'] / dt_sec
-
-    dt_sec_base = df_baseline['dt_hours'] * 3600
-    p_heat_ep_base = df_baseline['Heating:Electricity [J](TimeStep)'] / dt_sec_base
-    p_cool_ep_base = -df_baseline['Cooling:Electricity [J](TimeStep)'] / dt_sec_base
-    # --- Création de la figure ---
-    plt.figure(figsize=(8, 5))  # Taille adaptée pour être lisible une fois côte à côte
-
-    # Tracés Optimisation
-    plt.step(hours_p_opt, p_heat_opt, where='post', label="P_heat Opti (W)", color='red', alpha=0.5)
-    plt.step(hours_p_opt, p_cool_opt, 'r--', where='post', label="P_cool Opti (W)", alpha=0.5)
-
-    # Tracés EnergyPlus (Lignes continues)
-    plt.plot(hours_ep, p_heat_ep, 'b-', label="P_heat E+ (Réel)", alpha=0.8, linewidth=1.2)
-    plt.plot(hours_ep, p_cool_ep, 'b--', label="P_cool E+ (Réel)", alpha=0.8, linewidth=1.2)
-
-    # Tracés Baseline (Gris/Noir)
-    plt.plot(hours_ep_base, p_heat_ep_base, 'k-', label="P_heat Baseline", alpha=0.3)
-    plt.plot(hours_ep_base, p_cool_ep_base, color='grey', label="P_cool Baseline", alpha=0.3)
-
-    # Mise en forme
-    plt.title(f"Courbes Puissances Électriques - {day_str}")
-    plt.ylabel("Puissance Électrique [W] (cooling < 0)")
-    plt.xlabel("Heure [h]")
-    plt.xticks(np.arange(0, 25, 2))
-    plt.axhline(0, color='black', linewidth=0.8, alpha=0.3)  # Ligne de zéro
     plt.legend(loc='best', fontsize='small')
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
-    # Sauvegarde en PDF
-    plt.savefig(f"{output_dir}/Comp_Electric_Power_{day_str}.pdf")
-    plt.savefig(f"{output_dir}/Comp_Electric_Power_{day_str}.png")
+    plt.savefig(f"{output_dir}/Comp_Temp_{day_str}.png", dpi=300)
+    plt.savefig(f"{output_dir}/Comp_Temp_{day_str}.pdf")
     plt.close()
 
+    # --- FIGURE 2 : COMPARAISON PUISSANCES THERMIQUES (Q_hvac) ---
+    plt.figure()
+    plt.step(hours_97, q_opt_97, where='post', label="Q_hvac Opti (Théorique)", color='red', alpha=0.6, linewidth=1.5)
+    plt.step(hours_97, q_real_97, where='post', label="Q_hvac EnergyPlus (Réel Ex-post)", color='blue', alpha=0.7,
+             linewidth=1.2)
+    plt.step(hours_97, q_base_97, where='post', label="Q_hvac Baseline", color='gray', alpha=0.4)
+
+    plt.title(f"Profils des Puissances Thermiques - {day_str}", fontweight='bold')
+    plt.ylabel("Puissance Thermique [W]")
+    plt.xlabel("Heure [h]")
+    plt.xlim(0, 24)
+    plt.xticks(np.arange(0, 25, 2))
+    plt.axhline(0, color='black', linewidth=0.8, alpha=0.3)
+    plt.legend(loc='best', fontsize='small')
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Comp_Power_{day_str}.png", dpi=300)
+    plt.savefig(f"{output_dir}/Comp_Power_{day_str}.pdf")
+    plt.close()
+
+    # --- FIGURE 3 : PUISSANCES ÉLECTRIQUES APPELÉES ---
+    plt.figure()
+    # Tracés Optimisation (Paliers parfaits 'post')
+    plt.step(hours_97, p_heat_opt_97, where='post', label="P_heat Opti", color='red', alpha=0.5)
+    plt.step(hours_97, p_cool_opt_97, 'r--', where='post', label="P_cool Opti", alpha=0.5)
+
+    # Tracés EnergyPlus Réel Ex-post (Paliers lissés corrigés à 900s)
+    plt.step(hours_97, p_heat_ep_97, where='post', label="P_heat E+ (Réel)", color='blue', alpha=0.8, linewidth=1.2)
+    plt.step(hours_97, p_cool_ep_97, 'b--', where='post', label="P_cool E+ (Réel)", alpha=0.8, linewidth=1.2)
+
+    # Tracés Baseline
+    plt.step(hours_97, p_heat_base_97, where='post', label="P_heat Baseline", color='black', alpha=0.3)
+    plt.step(hours_97, p_cool_base_97, where='post', label="P_cool Baseline", color='grey', alpha=0.3)
+
+    plt.title(f"Profils des Puissances Électriques HVAC - {day_str}", fontweight='bold')
+    plt.ylabel("Puissance Électrique [W] (cooling < 0)")
+    plt.xlabel("Heure de la journée [h]")
+    plt.xlim(0, 24)
+    plt.xticks(np.arange(0, 25, 2))
+    plt.axhline(0, color='black', linewidth=0.8, alpha=0.3)
+    plt.legend(loc='best', fontsize='small')
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Comp_Electric_Power_{day_str}.png", dpi=300)
+    plt.savefig(f"{output_dir}/Comp_Electric_Power_{day_str}.pdf")
+    plt.close()
+
+    # --- FIGURE 4 : COÛTS FINANCIERS AU QUART D'HEURE ---
+    plt.figure()
+    plt.step(hours_97, cost_real_97, where='post', color='blue', linewidth=1.5, label="Coût Ex-post E+")
+    plt.step(hours_97, cost_base_97, where='post', color='grey', linewidth=1.5, label="Coût Baseline E+")
+    plt.step(hours_97, cost_opt_97, where='post', color='red', alpha=0.7, linewidth=1.5, label="Coût Prédit Opti")
+
+    plt.title(f" Coûts d'Électricité par Quart d'Heure - {day_str}", fontweight='bold')
+    plt.ylabel("Coût du pas de temps [€]")
+    plt.xlabel("Heure de la journée [h]")
+    plt.xlim(0, 24)
+    plt.xticks(np.arange(0, 25, 2))
+    plt.legend(loc='best')
+    plt.grid(True, linestyle=':', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Couts_{day_str}.png", dpi=300)
+    plt.savefig(f"{output_dir}/Couts_{day_str}.pdf")
+
+    # Nettoyage absolu de la mémoire Matplotlib pour le jour ou modèle suivant
     plt.close('all')
 
 
 
+def plot_global_costs_bar_chart(all_stats_list, all_stats_list_sans_opti, name, runfile, output_dir="apiV4"):
+    """
+    Génère un graphique en bâtonnets comparant le coût total journalier
+    entre la Baseline, l'Optimisation et l'Ex-post EnergyPlus pour les 12 jours.
+    """
+    # 1. Extraction et alignement des données
+    days = [stat['Day'] for stat in all_stats_list]
+    cost_opti = [stat['Cost_Opti'] for stat in all_stats_list]
+    cost_expost = [stat['Cost_Real'] for stat in all_stats_list]
+
+    # Mapper les coûts de la baseline par jour pour garantir la correspondance
+    baseline_dict = {stat['Day']: stat['Cost_Real'] for stat in all_stats_list_sans_opti}
+    cost_baseline = [baseline_dict.get(day, 0.0) for day in days]
+
+    # 2. Configuration géométrique des barres
+    x = np.arange(len(days))  # Emplacement des étiquettes des jours
+    width = 0.25  # Largeur de chaque bâtonnet
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+
+    # Tracé des 3 groupes de bâtonnets
+    rects1 = ax.bar(x - width, cost_baseline, width, label='Baseline EnergyPlus', color='gray', alpha=0.7)
+    rects2 = ax.bar(x, cost_opti, width, label='Optimisation (Théorique)', color='red')
+    rects3 = ax.bar(x + width, cost_expost, width, label='Ex-post EnergyPlus (Réel)', color='blue')
+
+    # 3. Personnalisation des axes et légendes
+    ax.set_ylabel('Coût Total du Jour [€]', fontsize=11, fontweight='bold')
+    ax.set_title(f'Comparaison des Coûts Totaux Journaliers - Modèle {name}', fontsize=13, fontweight='bold', pad=15)
+    ax.set_xticks(x)
+    ax.set_xticklabels(days, rotation=45, ha='right')
+    ax.grid(True, linestyle=':', alpha=0.6, axis='y')
+    ax.legend(loc='upper right', fontsize=10)
+
+    # 4. Ajout des valeurs au-dessus des barres pour la lisibilité
+    def autolabel(rects):
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.2f}€',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),  # Décalage vertical de 3 points
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=8, rotation=45)
+
+    autolabel(rects1)
+    autolabel(rects2)
+    autolabel(rects3)
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Comparaison_Globale_Couts_12jours.pdf")
+    plt.savefig(f"{output_dir}/Comparaison_Globale_Couts_12jours.png")
+    plt.close('all')
 
 def export_validation_to_excel(all_stats, all_df_days, output_path="opti/Validation_EPlus_VS_Opti.xlsx"):
     """
@@ -730,22 +773,16 @@ def analyze_variable_timestep_results_sans_opti(day_str, results_all_days, csv_d
     # 1. Gérer le "24:00:00" d'EnergyPlus
     # On identifie les lignes à minuit
     mask_midnight = df['Date/Time'].str.contains("24:00:00")
-
-    # On remplace 24:00:00 par 00:00:00 pour que Pandas accepte la lecture
     df['Timestep_clean'] = df['Date/Time'].str.replace("24:00:00", "00:00:00")
-    # On convertit en datetime
     df['datetime'] = pd.to_datetime("2017/" + df['Timestep_clean'].str.strip(), format="%Y/%m/%d %H:%M:%S")
-
     # Pour les lignes qui étaient à 24:00:00, on ajoute 1 jour car c'est le minuit du lendemain
     df.loc[mask_midnight, 'datetime'] = df.loc[mask_midnight, 'datetime'] + pd.Timedelta(days=1)
 
-    # 2. Filtrer pour ne garder que le jour d'intérêt
-    # Attention : le minuit (00:00:00) du jour J est maintenant inclus correctement
-    #df['datetime'] = pd.to_datetime("2017/" + df['Date/Time'], format="%Y/ %m/%d %H:%M:%S")
-
     # 2. Filtrer pour ne garder que le jour d'intérêt (exclure le warmup)
     target_date = pd.to_datetime(day_str).replace(year=2017)
-    df_day = df[df['datetime'].dt.date == target_date.date()].copy()
+    next_date = target_date + pd.Timedelta(days=1)
+    # df_day = df[df['datetime'].dt.date == target_date.date()].copy()
+    df_day = df[(df['datetime'] >= target_date) & (df['datetime'] <= next_date)].copy()
 
     # 3. Calcul du dt réel en heures pour chaque ligne
     # On calcule la différence de temps avec la ligne suivante
@@ -754,6 +791,12 @@ def analyze_variable_timestep_results_sans_opti(day_str, results_all_days, csv_d
     df_day['dt_hours'].fillna(0.25, inplace=True)
     df_day['dt_seconds'] = df_day['dt_hours'] * 3600
 
+    energy_cols = [
+        'Heating:Electricity [J](TimeStep)',
+        'Cooling:Electricity [J](TimeStep)',
+        'Fans:Electricity [J](TimeStep) '
+    ]
+    df_day.loc[df_day['datetime'] == target_date, energy_cols] = 0.0
     # 4. Calcul du coût réel avec prix dynamique
     # Il faut mapper le prix de l'optimisation (qui est fixe par 15min)
     # sur chaque micro-pas de temps de EnergyPlus
@@ -761,51 +804,237 @@ def analyze_variable_timestep_results_sans_opti(day_str, results_all_days, csv_d
     prices_96 = res_opt['Prices']  # Liste de 96 prix
 
     def get_price_for_time(dt):
-        # Calcule l'index (0-95) dans le vecteur de prix basé sur l'heure/minute
+        if dt == next_date:
+            return prices_96[-1]
         idx = int((dt.hour * 60 + dt.minute) // 15)
         return prices_96[min(idx, 95)]
 
     df_day['current_price'] = df_day['datetime'].apply(get_price_for_time)
 
-    # Puissance totale électrique (j)
-    p_elec_j = (df_day['Heating:Electricity [J](TimeStep)'] +
-                df_day['Cooling:Electricity [J](TimeStep)'] +
-                df_day['Fans:Electricity [J](TimeStep) '])
+    df_day = df_day.set_index('datetime')
+    df_numeric = df_day.select_dtypes(include=[np.number])
 
-    # Coût par ligne = (j / (dtsec*1000)) * dt_heures * Prix_kWh
-    df_day['step_cost_real'] = (p_elec_j /(df_day['dt_seconds'] * 1000)) * df_day['dt_hours'] * df_day['current_price']
-    #cout total
-    total_cost_day_ep = df_day['step_cost_real'].sum()
+    # Conversion Énergie [J] -> Puissance Moyenne [W] fixe sur le bloc de 15 min
+    df_numeric['P_total_W'] = (df_numeric['Heating:Electricity [J](TimeStep)'] +
+                               df_numeric['Cooling:Electricity [J](TimeStep)'] +
+                               df_numeric['Fans:Electricity [J](TimeStep) ']) / 900.0
 
-    # Somme des énergies en Joules sur toutes les lignes du jour
-    total_energy_j = (df_day['Heating:Electricity [J](TimeStep)'] +
-                      df_day['Cooling:Electricity [J](TimeStep)'] +
-                      df_day['Fans:Electricity [J](TimeStep) ']).sum()
-    #energie totale en kwh
-    total_energy_kwh = total_energy_j / 3600000
-    #Puissance moyenne sur la journée [W]
+    # Calcul du coût exact par sous-pas (la ligne de minuit ajoutera 0€)
+    df_numeric['step_cost_real'] = (df_numeric['P_total_W'] / 1000.0) * df_numeric['dt_hours'] * df_numeric['current_price']
+    total_cost_day_ep = df_numeric['step_cost_real'].sum()
+
+    # Intégration temporelle pour l'énergie totale cumulée [Joules] du jour J
+    total_energy_j = (df_numeric['P_total_W'] * df_numeric['dt_seconds']).sum()
+    total_energy_kwh = total_energy_j / 3600000.0
     avg_power_w = total_energy_j / (24 * 3600)
 
+    df_resampled = df_numeric.resample('15min').mean().iloc[:97]
     # Rééchantillonnage pour la température (RMSE propre)
     # On prend la moyenne de température sur chaque 15 min pour comparer à l'opti
-    t_opt_96 = np.array(res_opt['T_zone'][:96])
-    # On définit l'index sur le temps
-    df_day = df_day.set_index('datetime')
-    # On ne sélectionne QUE les colonnes de type numérique (int ou float)
-    # Cela exclut automatiquement 'Timestep' (string) et 'Warmup' (bool)
-    df_numeric = df_day.select_dtypes(include=[np.number])
-    # On fait le resample sur ce DataFrame nettoyé
-    df_resampled = df_numeric.resample('15min').mean()
 
-    # On récupère la température
-    t_real_96 = df_resampled['LIVING_UNIT1:Zone Air Temperature [C](TimeStep)'].iloc[:96].values
+    p_real_96 = df_resampled['P_total_W'].iloc[1:97].values
+    t_real_97 = df_resampled['LIVING_UNIT1:Zone Air Temperature [C](TimeStep)'].values
+    t_opt_97 = np.array(res_opt['T_zone'][:97])
 
-    rmse_temp = np.sqrt(np.mean((t_opt_96 - t_real_96) ** 2))
+    # Métriques de la Baseline par rapport à la trajectoire de l'optimisation (Utile pour l'analyse)
+    p_tot_opt = np.array(res_opt['P_heating']) + np.array(res_opt['P_cooling'])
+    rmse_power = np.sqrt(np.mean((p_tot_opt - p_real_96) ** 2))
+    mape_power = np.mean(np.abs((p_real_96 - p_tot_opt) / (p_real_96 + 1e-5))) * 100
+    rmse_temp = np.sqrt(np.mean((t_opt_97 - t_real_97) ** 2))
     stats = {
         'Day': day_str,
         'Cost_Real': total_cost_day_ep,
         'RMSE_Temp': rmse_temp,
+        'RMSE_Power_W': rmse_power,
+        'MAPE_Power_Pct': mape_power,
         'Energy_Real_kWh': total_energy_kwh,
         'P_Avg_Real_W': avg_power_w
     }
     return stats, df_resampled
+
+def analyze_variable_timestep_results(day_str, results_all_days, name, csv_dir=None):
+    """
+    Analyse les résultats E+ à pas de temps variables et les compare à l'opti.
+    """
+    csv_path = os.path.join(csv_dir, f"validation_EP_{name}_{day_str}.csv")
+    df = pd.read_csv(csv_path, sep=';')
+
+    # --- ÉTAPE DE CORRECTION DU TIMESTEP ---
+    df['Timestep'] = df['Timestep'].str.replace("02/29", "03/01")
+    df['datetime'] = pd.to_datetime("2017/" + df['Timestep'], format="%Y/%m/%d %H:%M")
+
+    # Définition des frontières temporelles de la journée cible
+    target_date = pd.to_datetime(day_str).replace(year=2017)
+    next_date = target_date + pd.Timedelta(days=1)
+
+    # --- FILTRAGE DES INTERVALLES COMPRENANT MINUIT INITIAL ---
+    # On utilise '>=' pour conserver la ligne de minuit pile (00:00:00) du jour cible
+    df_day = df[(df['datetime'] >= target_date) & (df['datetime'] <= next_date)].copy()
+
+    # Calcul du dt réel en heures pour chaque ligne
+    df_day['dt_hours'] = df_day['datetime'].diff().dt.total_seconds().shift(-1) / 3600
+    df_day['dt_hours'].fillna(0.25, inplace=True)
+    df_day['dt_seconds'] = df_day['dt_hours'] * 3600
+
+    # --- NEUTRALISATION DE L'ÉNERGIE DE LA VEILLE (Ligne 00:00:00) ---
+    # On force à 0 les compteurs de la toute première ligne à minuit pile,
+    # car cette énergie appartient au jour précédent.
+    energy_cols = ['Heating:Electricity', 'Cooling:Electricity', 'Fans:Electricity']
+    df_day.loc[df_day['datetime'] == target_date, energy_cols] = 0.0
+
+    res_opt = results_all_days[day_str]
+    prices_96 = res_opt['Prices']
+
+    def get_price_for_time(dt):
+        if dt == next_date:
+            return prices_96[-1]
+        idx = int((dt.hour * 60 + dt.minute) // 15)
+        return prices_96[min(idx, 95)]
+
+    df_day['current_price'] = df_day['datetime'].apply(get_price_for_time)
+
+    # --- SÉLECTION ET TRAITEMENT NUMÉRIQUE ---
+    df_day = df_day.set_index('datetime')
+    df_numeric = df_day.select_dtypes(include=[np.number])
+
+    # Conversion Énergie [J] -> Puissance Moyenne [W] du bloc de 15 minutes
+    df_numeric['P_total_W'] = (df_numeric['Heating:Electricity'] +
+                               df_numeric['Cooling:Electricity'] +
+                               df_numeric['Fans:Electricity']) / 900.0
+
+    # Calcul du coût exact intégré par sous-pas de temps (la ligne 00:00:00 ajoutera 0€)
+    df_numeric['step_cost_real'] = (df_numeric['P_total_W'] / 1000.0) * df_numeric['dt_hours'] * df_numeric[
+        'current_price']
+    total_cost_day_ep = df_numeric['step_cost_real'].sum()
+
+    # Intégration temporelle pour l'énergie totale cumulée [Joules] du jour J
+    total_energy_j = (df_numeric['P_total_W'] * df_numeric['dt_seconds']).sum()
+    total_energy_kwh = total_energy_j / 3600000.0
+    avg_power_w = total_energy_j / (24 * 3600)
+
+    # --- CALCUL OPTIMISATION POUR COMPARAISON ---
+    p_tot_opt = np.array(res_opt['P_heating']) + np.array(res_opt['P_cooling'])
+    energy_opt_kwh = (p_tot_opt * 0.25).sum() / 1000.0
+    avg_power_opt_w = p_tot_opt.mean()
+
+    # --- RÉÉCHANTILLONNAGE SYNCHRONISÉ ---
+    # label='left' associe la fin de l'intervalle au début (ex: 00:15 devient indexé à 00:00)
+    df_resampled = df_numeric.resample('15min').mean().iloc[:97]
+
+    # Extraction des vecteurs de comparaison (96 points pour les puissances)
+    p_real_96 = df_resampled['P_total_W'].iloc[1:97].values
+    t_real_97 = df_resampled['Zone Air Temperature,LIVING_UNIT1'].values
+    t_opt_97 = np.array(res_opt['T_zone'][:97])
+
+    # --- CALCUL DES MÉTRIQUES STATISTIQUES ---
+    rmse_power = np.sqrt(np.mean((p_tot_opt - p_real_96) ** 2))
+    mape_power = np.mean(np.abs((p_real_96 - p_tot_opt) / (p_real_96 + 1e-5))) * 100
+    rmse_temp = np.sqrt(np.mean((t_opt_97 - t_real_97) ** 2))
+
+    stats = {
+        'Day': day_str,
+        'Cost_Opti': res_opt['total_Cost'],
+        'Cost_Real': total_cost_day_ep,
+        'Difference_Euro': total_cost_day_ep - res_opt['total_Cost'],
+        'RMSE_Temp': rmse_temp,
+        'RMSE_Power_W': rmse_power,
+        'MAPE_Power_Pct': mape_power,
+        'Energy_Opti_kWh': energy_opt_kwh,
+        'Energy_Real_kWh': total_energy_kwh,
+        'P_Avg_Opti_W': avg_power_opt_w,
+        'P_Avg_Real_W': avg_power_w
+    }
+
+    return stats, df_resampled
+
+
+def plot_model_cuts_comparison(model_linear_func, model_quadratic_func, output_dir="apiV2/comparaisons_modeles"):
+    """
+    Génère des coupes physiques en 2D pour comparer visuellement le comportement
+    d'un modèle linéaire et d'un modèle quadratique fournis en arguments.
+
+    Parameters:
+    -----------
+    model_linear_func : function
+        Fonction Python acceptant (T, Tout, Q) et renvoyant T_next pour le modèle linéaire.
+    model_quadratic_func : function
+        Fonction Python acceptant (T, Tout, Q) et renvoyant T_next pour le modèle quadratique.
+    output_dir : str
+        Dossier de sauvegarde des graphiques.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # =========================================================================
+    # COUPE 1 : SENSIBILITÉ À LA PUISSANCE HVAC (Q) EN HIVER
+    # On fixe T_zone = 20°C, T_out = -5°C (Grand froid) et on fait varier Q
+    # =========================================================================
+    Q_range = np.linspace(-7120, 7120, 500)  # Plage complète de la PAC [W]
+    T_fixed = 20.0
+    Tout_fixed = -5.0
+
+    T_next_lin_Q = [model_linear_func(T_fixed, Tout_fixed, q) for q in Q_range]
+    T_next_quad_Q = [model_quadratic_func(T_fixed, Tout_fixed, q) for q in Q_range]
+
+    plt.figure(figsize=(9, 5))
+    plt.plot(Q_range, T_next_lin_Q, label="Modèle Linéaire", color="red", linestyle="--", linewidth=1.5)
+    plt.plot(Q_range, T_next_quad_Q, label="Modèle Quadratique", color="blue", linewidth=2)
+    plt.title(f"Coupe Thermique : Impact de Qhvac ($Q$) à $T_{{in}}$={T_fixed}°C et $T_{{out}}$={Tout_fixed}°C")
+    plt.xlabel("Puissance Thermique HVAC $Q$ [W] (Chauffage > 0, Clim < 0)")
+    plt.ylabel("$T_{{next}}$ après 15 min [°C]")
+    plt.grid(True, linestyle=":", alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Coupe_Sensibilite_Q_Hiver.pdf", dpi=300)
+    plt.savefig(f"{output_dir}/Coupe_Sensibilite_Q_Hiver.png", dpi=300)
+    plt.close()
+
+    # =========================================================================
+    # COUPE 2 : SENSIBILITÉ À LA TEMPÉRATURE EXTÉRIEURE (Tout)
+    # On fixe T_zone = 21°C, Q = 0W (Bâtiment passif) et on fait varier Tout
+    # =========================================================================
+    Tout_range = np.linspace(-10, 35, 500)  # De l'hiver à l'été [°C]
+    T_fixed_2 = 21.0
+    Q_fixed_2 = 0.0
+
+    T_next_lin_Tout = [model_linear_func(T_fixed_2, tout, Q_fixed_2) for tout in Tout_range]
+    T_next_quad_Tout = [model_quadratic_func(T_fixed_2, tout, Q_fixed_2) for tout in Tout_range]
+
+    plt.figure(figsize=(9, 5))
+    plt.plot(Tout_range, T_next_lin_Tout, label="Modèle Linéaire (Pente fixe)", color="red", linestyle="--",
+             linewidth=1.5)
+    plt.plot(Tout_range, T_next_quad_Tout, label="Modèle Quadratique (Courbure)", color="blue", linewidth=2)
+    plt.title(f"Coupe Thermique : Dérive Passive ($Q=0$W) à $T_{{in}}$={T_fixed_2}°C")
+    plt.xlabel("Température Extérieure $T_{out}$ [°C]")
+    plt.ylabel("$T_{{next}}$ après 15 min [°C]")
+    plt.grid(True, linestyle=":", alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Coupe_Sensibilite_Tout_Passif.pdf", dpi=300)
+    plt.savefig(f"{output_dir}/Coupe_Sensibilite_Tout_Passif.png", dpi=300)
+    plt.close()
+
+    # =========================================================================
+    # COUPE 3 : APPORTS DU TERME CROISÉ (T * Tout)
+    # On fixe Q = 3000W (Chauffage moyen), Tout = 5°C et on fait varier T_zone
+    # =========================================================================
+    T_range = np.linspace(15, 26, 500)  # Plage de confort élargie [°C]
+    Tout_fixed_3 = 5.0
+    Q_fixed_3 = 3000.0
+
+    T_next_lin_T = [model_linear_func(t, Tout_fixed_3, Q_fixed_3) for t in T_range]
+    T_next_quad_T = [model_quadratic_func(t, Tout_fixed_3, Q_fixed_3) for t in T_range]
+
+    plt.figure(figsize=(9, 5))
+    plt.plot(T_range, T_next_lin_T, label="Modèle Linéaire", color="red", linestyle="--", linewidth=1.5)
+    plt.plot(T_range, T_next_quad_T, label="Modèle Quadratique (Effet couplé $T \\times T_{out}$)", color="blue",
+             linewidth=2)
+    plt.title(f"Coupe Thermique : Sensibilité à $T_{{zone}}$ ($Q$={Q_fixed_3}W, $T_{{out}}$={Tout_fixed_3}°C)")
+    plt.xlabel("Température Actuelle de la Zone $T_{zone}$ [°C]")
+    plt.ylabel("$T_{{next}}$ après 15 min [°C]")
+    plt.grid(True, linestyle=":", alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/Coupe_Sensibilite_Tzone.pdf", dpi=300)
+    plt.savefig(f"{output_dir}/Coupe_Sensibilite_Tzone.png", dpi=300)
+    plt.close('all')
+
