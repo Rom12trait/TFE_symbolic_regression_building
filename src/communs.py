@@ -316,17 +316,22 @@ def create_run_folder(model_name, base_dir="results/"):
     return run_path
 
 
-def agregate(runfile):
+def agregate(runfile, step = "1step"):
 
     runfile = runfile
 
     project_root = Path(__file__).resolve().parents[1]
-    run_dir = project_root / "results" / runfile
+    run_dir = project_root / "outputs"
+
+    #run_dir = project_root / "results" / runfile
     FILES = {
-        "Benchmark": run_dir / "metrics_benchmark_rc.xlsx",
-        "PySR": run_dir / "metrics_pysr.xlsx",
-        "RL": run_dir / "metrics_rl.xlsx",
-        "RC": run_dir / "metrics_rc.xlsx"
+    #    #"Benchmark": run_dir / "metrics_benchmark_rc.xlsx",
+    #    "PySR": run_dir / f"metrics_PySR_{step}.xlsx",
+    #    "RL": run_dir / f"metrics_Linear_{step}.xlsx",
+    #    "RC": run_dir / f"metrics_RC_{step}.xlsx"
+        "PySR_exp": run_dir / "pysr_exp_n150_p20" /f"metrics_{step}.xlsx",
+        "PySR_cube": run_dir / "pysr_quad_iter200_pop30" / f"metrics_{step}.xlsx",
+
     }
     print("PROJECT_ROOT =", project_root)
     print("RUN_DIR =", run_dir)
@@ -342,16 +347,17 @@ def agregate(runfile):
 
     final_df = pd.concat(dfs, ignore_index=True)
 
-    output = Path(run_dir / "metrics_all_models.xlsx")
+    output = Path(run_dir / f"metrics_all_models_{step}.xlsx")
     final_df.to_excel(output, index=False)
 
     print(f" Fichier créé : {output}")
 
-def tolatex(runfile):
+def tolatex(runfile, file = "results", step = "1step"):
     project_root = Path(__file__).resolve().parents[1]
-    run_dir = project_root / "results" / runfile
+    #run_dir = project_root / file / runfile   # pour les data in results
+    run_dir = project_root / file
 
-    file_path = run_dir / "metrics_all_models.xlsx"
+    file_path = run_dir / f"metrics_all_models_{step}.xlsx"
     df = pd.read_excel(file_path)
 
     #df = df.round(3)
@@ -372,7 +378,7 @@ def tolatex(runfile):
     latex_code = df_final.to_latex(index=False, caption="Mon tableau", label="tab:mon_tableau", float_format = "%.3f")
     # ou float_format = "%.3f" dans to_latex
     # 3. Sauvegarder dans un fichier .tex
-    with open(run_dir/"tableau.tex", "w", encoding="utf-8") as f:
+    with open(run_dir/f"tableau_{step}.tex", "w", encoding="utf-8") as f:
         f.write(latex_code)
 
     print("Conversion réussie ! Fichier 'tableau.tex' généré.")

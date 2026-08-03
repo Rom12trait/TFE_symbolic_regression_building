@@ -44,3 +44,35 @@ class RCModel(BaseModel):
 
     def get_parameters_dict(self):
         return {"R": self.R, "C": self.C, "a": self.a, "b": self.b, "c": self.c}
+
+    def benchmark(self, t_zone, timestep_minutes=15, day_step=4):
+
+        steps_per_hour = 60 // timestep_minutes
+        steps_per_day = 24 * steps_per_hour  # 96 si 15 min
+
+        values = t_zone
+
+        y_true = []
+        y_pred = []
+
+        total_days = len(values) // steps_per_day
+
+        for day in range(0, total_days - 1, day_step):
+
+            start_idx = day * steps_per_day
+            end_idx = start_idx + steps_per_day
+
+            # prédiction = valeurs du jour courant
+            pred_day = values[start_idx:end_idx]
+
+            # vérité = valeurs 1 pas de temps plus tard
+            true_day = values[start_idx + 1: end_idx + 1]
+
+            if len(true_day) == steps_per_day:
+                y_pred.append(pred_day)
+                y_true.append(true_day)
+
+        y_pred = np.concatenate(y_pred)
+        y_true = np.concatenate(y_true)
+
+        return y_true, y_pred

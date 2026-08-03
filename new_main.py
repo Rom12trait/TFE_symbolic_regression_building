@@ -22,15 +22,14 @@ from src.api_validator import EnergyPlusValidator
 from src.building_model import MediumOffice
 
 
-runfile="LinearV2_annee_dyn" #LinearV2_annee_classique" #LinearV2_annee_dyn
-yeartype = 'dynamique' #ou 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
+runfile="NonLinear_annee_dyn_couenne" #LinearV2_annee_classique" #LinearV2_annee_dyn
+yeartype = 'cube' #ou 'exp' 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
 version = 'V4'
 name = "Linear"
-
-names = ["Quadratic"] #"Linear", "PySR"
-runfiles = [ "LinearV2_annee_dyn"] # Tes 2 dossiers d'années "LinearV2_annee_classique",
 file_paths = ["Validation_EPlus_VS_Opti", "Validation_EPlus_sans_Opti"]
 
+#communs.agregate(runfile, "annuel_24h")
+#communs.tolatex(runfile, "outputs", "annuel_24h")
 
 
 #run_dir = communs.create_run_folder("run_2","results")
@@ -62,66 +61,103 @@ models = {
     #"Linear": regression_models.PolynomialThermalModel(degree=1),
     #"Quadratic": regression_models.RestrictedQuadraticModel(),  #regression_models.PolynomialThermalModel(degree=2),
     #"PySR": symbolic_models.PySRThermalModel(niterations=80),
-    "PySR_non": symbolic_models.PySRThermalModel(niterations=150)
+    "PySR_exp": symbolic_models.PySRThermalModel(niterations=150)
 }
+simulations_config = [
+    {
+        "run_id": "pysr_square_n120_p20_1step",
+        "niterations": 120,
+        "populations": 20,
+        "maxsize": 30,
+        "parsimony": 0.0005,
+        "complexity_of_constants": 2
+    },
 
+]
+#%%
+for config in simulations_config:
+    run_id = config["run_id"]
+    n_iter = config["niterations"]
+    n_pop = config["populations"]
+    maxsize = config["maxsize"]
+    parsimony = config["parsimony"]
+    complexity_of_constants = config["complexity_of_constants"]
 
-for name, model in models.items():
-    print(f"\n>>> Modèle : {name}")
+    print(f"\n=========================================================================")
+    print(f"🚀 LANCEMENT DE LA SIMULATION : {run_id}")
+    print(f"Configurations : Iterations={n_iter} | Populations={n_pop}")
+    print(f"=========================================================================")
 
-    # 1. Entraînement
-    if name != "RC":
-        model.fit(X_train, y_train)
+    # 1. Dossier de destination unique pour centraliser TOUTES les sauvegardes de ce run
+    save_dir = f"outputs/{run_id}"
+    os.makedirs(save_dir, exist_ok=True)
 
-    # 2. Métriques standards (1-step prediction sur X_test)
+    # 2. Instanciation dynamique avec passage du run_id
+    model = symbolic_models.PySRThermalModel(niterations=n_iter,
+                                             run_id=run_id,
+                                             populations=n_pop,
+                                             maxsize = config["maxsize"],
+                                             parsimony = config["parsimony"],
+                                             complexity_of_constants = config["complexity_of_constants"])
+
+    # 3. Entraînement
+    model.fit(X_train, y_train)
+
+    # 4. Évaluation 1-step
     y_pred_1step, _ = model.predict(X_test)
     metrics_1step = communs.compute_metrics(y_test, y_pred_1step)
 
-    # 3. Métriques récursives 24h sur TOUTE l'année
-    # On utilise X (données complètes) pour simuler 365 jours
+    # 5. Évaluation récursive 24h
     y_pred_24h, time_24h = model.simulate_yearly_24h(X)
-
-    # Comparaison avec y_true (qui est décalé de 1 pas par rapport à X[:,0])
-    # Mais ici on compare souvent la T_zone prédite à la T_zone réelle du dataset
     metrics_24h = communs.compute_metrics(X[:, 0], y_pred_24h)
 
-    # 4. Sauvegardes
+    # 6. Extraction de l'expression sélectionnée
+    equ = model.get_sympy_expression()
+    print(f"✨ Équation Sélectionnée dénormalisée : {equ}")
+
+    # =========================================================================
+    # ARCHIVAGE SÉCURISÉ DANS LE MÊME DOSSIER (save_dir)
+    # =========================================================================
+    # Sauvegarde des métriques excel au même endroit
     communs.save_run_to_excel(
-        filepath=f"results/{runfile}/metrics_{name}_1step.xlsx",
-        model_name=f"{name}_1step",
+        filepath=f"{save_dir}/metrics_1step.xlsx",
+        model_name=f"{run_id}_1step",
         metrics=metrics_1step,
         comment="prédiction sur le pas suivant"
     )
 
-    # Sauvegarde des prédictions pour graphiques
     communs.save_predictions(
-        filepath=f"results/{runfile}/preds_{name}_1step.xlsx",
+        filepath=f"{save_dir}/preds_1step.xlsx",
         datetime_index=None,
         t_true=y_test,
         t_pred=y_pred_1step
     )
 
     communs.save_run_to_excel(
-        filepath=f"results/{runfile}/metrics_{name}_annuel_24h.xlsx",
-        model_name=f"{name}_24h",
+        filepath=f"{save_dir}/metrics_annuel_24h.xlsx",
+        model_name=f"{run_id}_24h",
         metrics=metrics_24h,
         comment="Déroulement récursif 24h sur 365 jours"
     )
 
-    # Sauvegarde des prédictions pour graphiques
     communs.save_predictions(
-        filepath=f"results/{runfile}/preds_{name}_24h.xlsx",
+        filepath=f"{save_dir}/preds_24h.xlsx",
         datetime_index=df.index,
         t_true=X[:, 0],
         t_pred=y_pred_24h
     )
-    equ = model.get_sympy_expression()
-    print(equ)
 
-    model.save_parameters(f"results/{runfile}/",
-                               filename=f"parametres_{name}.json")
+    # Sauvegarde des paramètres json du modèle
+    model.save_parameters(f"{save_dir}/", filename="parametres_PySR.json")
 
-print(" Analyse annuelle 24h terminée.")
+    # SAUVEGARDE TEXTE SÉPARÉE DE L'ÉQUATION RETENUE
+    with open(f"{save_dir}/equation_selectionnee.txt", "w", encoding="utf-8") as f:
+        f.write(f"Structure de l'equation extraite par la méthode accuracy :\n")
+        f.write(f"{str(equ)}\n")
+
+    print(f" Tout le contenu du run {run_id} a été archivé avec succès.")
+
+print("\n Toutes les simulations automatisées sont terminées avec succès.")
 
 #%%
 selected_days, dict_days_prices, df_prix = communs.process_market_prices('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv', seed = 42)
@@ -237,8 +273,6 @@ for name, model in models.items():
     communs.plot_global_costs_bar_chart(all_stats_list, all_stats_list_sans_opti, name=name, runfile=runfile, output_dir=f"api{version}/{name}_{runfile}")
     communs.export_validation_to_excel(all_stats_list,all_df_days_dict, output_path=f"api{version}/{name}_{runfile}/Validation_EPlus_VS_Opti.xlsx")
     communs.export_validation_to_excel(all_stats_list_sans_opti, all_df_days_dict_sans_opti, output_path=f"api{version}/{name}_{runfile}/Validation_EPlus_sans_Opti.xlsx")
-#%%
-#for name in names:
- #   for runfile in runfiles:
-  #      for file_path in file_paths:
-    #        communs.to_latex(version, name, runfile, file_path)
+
+    for file_path in file_paths:
+            communs.to_latex(version, name, runfile, file_path)

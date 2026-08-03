@@ -113,10 +113,8 @@ class HVACOptimizer:
 
         model.cool_excl = pyo.Constraint(model.T, rule=cool_excl_rule)
 
-        # --- DYNAMIQUE THERMIQUE (MÉTHODE SYMBOLE DIRECTE) ---
-        # On récupère l'expression SymPy
-        expr_sympy = self.thermal_model.get_sympy_expression()
-        T_sym, Tout_sym, Q_sym = sympy.symbols('T Tout Q')
+
+
 
         # 6. Dynamique thermique (L'automatisation est ici !)
         def thermal_dynamics_rule(m, t):
@@ -126,6 +124,27 @@ class HVACOptimizer:
                 return m.T_zone[0] == val_init
 
             # --- CAS SPÉCIFIQUE PYSR (BRUTE FORCE) ---
+            if self.thermal_model.__class__.__name__ == 'PySRThermalModel' and year == 'exp':
+                # ÉQUATION EXPONENTIELLE NON LINÉAIRE (Modèle Ipopt)
+                return m.T_zone[t] == (
+                        0.284656230113608 * pyo.exp(0.143741769601487 * float(Tout_vector[t - 1]) -
+                                                    (0.000517122740535654 * m.Qhvac[t - 1] + 0.0141820235751735) ** 2) +
+                        21.7321770029164 -
+                        3.63209106019174 * pyo.exp(-(0.000517122740535654 * m.Qhvac[t - 1] +
+                                                     0.308082902268653 * m.T_zone[t - 1] - 5.84234646606035) ** 2)
+                )
+            if self.thermal_model.__class__.__name__ == 'PySRThermalModel' and year == 'cube':
+                # ÉQUATION QUADRATIQUE/CUBIQUE DE HAUTE PRÉCISION (R² = 0.7040)
+                # On utilise les opérateurs natifs de Pyomo (**) compatibles avec Ipopt
+                return m.T_zone[t] == (
+                        1.73225180795747e-8 * (m.Qhvac[t - 1] ** 2) +
+                        0.000367698095454799 * m.Qhvac[t - 1] -
+                        0.0153468178001472 * (m.T_zone[t - 1] ** 3) +
+                        1.00054755529384 * (m.T_zone[t - 1] ** 2) -
+                        20.7438507472603 * m.T_zone[t - 1] +
+                        0.0754394535100545 * float(Tout_vector[t - 1]) +
+                        156.662748052745
+                )
             if self.thermal_model.__class__.__name__ == 'PySRThermalModel' and year == 'dynamique':
                 # On écrit l'équation manuellement comme demandé
                 return m.T_zone[t] == (
@@ -142,6 +161,9 @@ class HVACOptimizer:
                         0.120920836775699
                 )
 
+            # On récupère l'expression SymPy
+            expr_sympy = self.thermal_model.get_sympy_expression()
+            T_sym, Tout_sym, Q_sym = sympy.symbols('T Tout Q')
             # Reconstruction manuelle de l'expression pour Pyomo
             # On remplace les symboles SymPy par les objets Pyomo
             subs = {
@@ -171,7 +193,14 @@ class HVACOptimizer:
             opt = pyo.SolverFactory('gurobi')
         else:
             # Pour tout ce qui est quadratique ou symbolique non-linéaire
-            opt = pyo.SolverFactory('ipopt')
+            #opt = pyo.SolverFactory('couenne', solver_io='asl', executable = "C:/Users/Corentin/PycharmProjects/thermal-dynamics-symbolic-regression/.venv/Scripts/couenne.exe") #ipopt
+            # Temps de calcul maximum de 60 secondes par journée
+            #opt.options['time_limit'] = 60
+            opt = pyo.SolverFactory('asl')
+            opt.set_executable(
+                "C:/Users/Corentin/PycharmProjects/thermal-dynamics-symbolic-regression/.venv/Scripts/couenne.exe")
+            opt.options['solver'] = 'couenne'
+            # Options reconnues par l'interface ASL native
 
-        results = opt.solve(model)
+        results = opt.solve(model, tee=True)
         return model, results
