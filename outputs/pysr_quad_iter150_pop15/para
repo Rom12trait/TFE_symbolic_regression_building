@@ -1,0 +1,112 @@
+    def __init__(self, niterations=80, run_id="pysr_run", populations=15, population_size=30, **kwargs):
+        super().__init__(**kwargs)
+        # On définit un chemin absolu propre avec des slashes classiques '/'
+        #pysr_output_dir = "C:/Users/Corentin/pysr_outputs"
+        #os.makedirs(pysr_output_dir, exist_ok=True)
+        #pysr_dir = "C:\\pysrresults"
+        self.run_id = run_id
+        self.pysr_dir = os.path.abspath("C:/pysr_outputs")
+        #unix_clean_path = "/pysr_outputs"
+        multi_step_loss = """
+function my_trajectory_loss(tree, dataset, options)
+    X = dataset.X  # Matrix{Float32} de taille (3 x n_samples)
+    y = dataset.y  # Vector{Float32} de taille (n_samples)
+    n_samples = dataset.n
+
+        horizon = 48  # Simulation récursive sur x/4 heure (pas de 15 minutes)
+    total_error = 0.0
+    count = 0
+
+    X_step = Matrix{Float32}(undef, 3, 1)
+    saut = 1000
+    start_offset = rand(1:saut)
+    for i in start_offset:saut:(n_samples - horizon)
+        # Sécurité pour ne pas déborder du tableau à cause de l'offset
+        if i < 1
+            continue
+        end
+        # Température initiale réelle au début de l'horizon de 1 heure
+        T_sim = X[1, i]
+
+        for h in 0:(horizon - 1)
+            idx = i + h
+
+            # Construction d'une vraie Matrix{Float32} de taille (3 x 1) pour PySR
+            X_step[1, 1] = T_sim
+            X_step[2, 1] = X[2, idx]
+            X_step[3, 1] = X[3, idx]
+
+            # Évaluation du pas de temps par l'arbre PySR
+            pred_step, step_flag = eval_tree_array(tree, X_step, options)
+            if !step_flag
+                return Inf
+            end
+
+            # --- CORRECTION DU CRASH DE TYPE ---
+            # pred_step est un Vector{Float32} à 1 élément.
+            # On extrait explicitement la valeur scalaire numérique via [1]
+            # pour que T_sim reste un simple nombre Float32 au pas suivant.
+            T_sim = pred_step[1]
+
+            # Accumulation de l'écart quadratique trajectoire
+            total_error += (T_sim - y[idx])^2
+            count += 1
+        end
+    end
+
+    return total_error / count
+end
+"""
+        #os.makedirs(pysr_dir, exist_ok=True)
+
+        self.scaler_X = StandardScaler()
+        self.scaler_y = StandardScaler()
+        self.degree = 1
+        self.model = PySRRegressor(
+            niterations=niterations,
+            populations=populations,
+            population_size=population_size,
+            parsimony=0.002,
+            maxsize=25,
+            parallelism="multithreading",
+            binary_operators=["+", "*", "-",
+                              "conduct(x, y) = x - y",  # Calcule instantanément un gradient thermique (ex: T - Tout)
+                              "hvac_eff(x, y) = x * (y^2)"  # Multiplie la puissance par le carré d'une température
+            ],
+            unary_operators= ["square"],
+            model_selection= "accuracy",
+            verbosity= 1,
+            #elementwise_loss= "L2DistLoss()",
+            loss_function=multi_step_loss,
+            crossover_probability= 0.04,
+            complexity_of_constants= 1,  # Favorise l'intercept
+            complexity_of_variables= 1.5,
+            # 2. DICTIONNAIRE DE TRADUCTION POUR PYTHON (SymPy)
+            # Indispensable pour que get_sympy_expression() sache lire tes opérateurs Julia
+            extra_sympy_mappings={
+                "conduct": lambda x, y: x - y,
+                "hvac_eff": lambda x, y: x * (y ** 2)
+            },
+            nested_constraints={
+                "square": {"square": 0, "*": 0}
+            },
+            constraints= {
+        '*': (1,1),       # Empêche de multiplier des blocs trop complexes entre eux
+        #'/': (-1, -1)
+            }, # {'*': (1, 1)}
+            # SÉCURITÉ THERMODYNAMIQUE ABSOLUE
+            # On interdit explicitement à PySR de multiplier T avec Q, ou Q avec Q.
+            # On autorise uniquement les multiplications logiques (ex: T * Tout pour les pertes).
+
+            #select_k_features= 3,
+            batching= False,
+            batch_size= 32,
+
+            output_directory= None,
+            run_id= self.run_id,
+            # On désactive la gestion des dossiers temporaires dynamiques complexes
+            temp_equation_file=False,
+
+
+            **kwargs
+        )

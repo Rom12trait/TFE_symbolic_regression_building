@@ -1,0 +1,12 @@
+{
+    "model_type": "PolynomialThermalModel",
+    "random_state": 42,
+    "training_date": "2026-05-20 08:43:08",
+    "degree": 1,
+    "intercept": 0.8155276129783608,
+    "coef": [
+        0.9580522597868761,
+        0.00827508874643919,
+        3.6005573137969787e-06
+    ]
+}

@@ -1,0 +1,2 @@
+Structure de l'equation extraite par la méthode accuracy :
+0.000254717280510863

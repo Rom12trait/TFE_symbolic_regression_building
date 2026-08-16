@@ -1,0 +1,75 @@
+Evolving for 150 iterations... 100%|█████████████████████| Time: 0:29:31
+[ Info: Final population:
+───────────────────────────────────────────────────────────────────────────────────────────────────
+Complexity  Loss       Score      Equation
+1           7.146e-01  0.000e+00  y = x₁
+3           4.350e-01  2.481e-01  y = x₁ + x₂
+6           4.266e-01  6.523e-03  y = x₁ + (x₂ - 0.068728)
+9           4.259e-01  5.282e-04  y = ((x₂ - 0.1195) + 0.016615) + x₁
+11          4.259e-01  4.590e-05  y = (x₁ + (x₂ + square(log(1.1798)))) - 0.1195
+13          3.730e-01  6.637e-02  y = log(square(7.4079 - x₂)) + ((x₁ + x₂) - 4.0474)
+15          3.449e-01  3.904e-02  y = (log(square((x₂ + x₁) + -7.5869)) + (x₂ + x₁)) + -3.93...
+                                      19
+17          2.650e-01  1.319e-01  y = x₁ + ((square(log(7.4079 + (x₀ - (x₂ + x₁)))) + x₂) - ...
+                                      4.0474)
+28          2.384e-01  9.620e-03  y = ((0.016047 + (x₂ + log(square((x₂ + x₁) - (7.4079 + x₀...
+                                      ))))) + x₁) - square(log((x₂ + (x₁ - x₀)) + 7.4079))
+───────────────────────────────────────────────────────────────────────────────────────────────────
+[ Info: Results saved to:
+  - outputs\pysr_log_n150_p20\hall_of_fame.csv
+MSE (°C²)                : 1.8583
+RMSE (°C)                : 1.3632
+MAE (°C)                 : 0.9207
+Max Error (°C)           : 11.9835
+MBE / Bias (°C)          : -0.0487
+R² (-)                   : 0.7951
+CV(RMSE) (%)             : 6.5863
+Error Variance (°C²)     : 1.8559
+Error Std Dev (°C)       : 1.3623
+<lambdifygenerated-2>:2: RuntimeWarning: invalid value encountered in log
+  return x1 + x2 + log(x0 - x1 - x2 + 7.4079194)**2 - 4.047433
+Traceback (most recent call last):
+  File "<input>", line 113, in <module>
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\src\communs.py", line 221, in compute_metrics
+    mse = mean_squared_error(y_true, y_pred)
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 218, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\metrics\_regression.py", line 579, in mean_squared_error
+    _check_reg_targets_with_floating_dtype(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        y_true, y_pred, sample_weight, multioutput, xp=xp
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\metrics\_regression.py", line 208, in _check_reg_targets_with_floating_dtype
+    y_type, y_true, y_pred, sample_weight, multioutput = _check_reg_targets(
+                                                         ~~~~~~~~~~~~~~~~~~^
+        y_true, y_pred, sample_weight, multioutput, dtype=dtype_name, xp=xp
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\metrics\_regression.py", line 115, in _check_reg_targets
+    y_pred = check_array(y_pred, ensure_2d=False, dtype=dtype)
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\utils\validation.py", line 1074, in check_array
+    _assert_all_finite(
+    ~~~~~~~~~~~~~~~~~~^
+        array,
+        ^^^^^^
+    ...<2 lines>...
+        allow_nan=ensure_all_finite == "allow-nan",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\utils\validation.py", line 133, in _assert_all_finite
+    _assert_all_finite_element_wise(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        X,
+        ^^
+    ...<4 lines>...
+        input_name=input_name,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Corentin\PycharmProjects\thermal-dynamics-symbolic-regression\.venv\Lib\site-packages\sklearn\utils\validation.py", line 182, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input contains NaN.

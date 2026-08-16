@@ -1,0 +1,7 @@
+{
+    "model_type": "PySRThermalModel",
+    "random_state": 42,
+    "training_date": "2026-08-03 10:11:36",
+    "equation": "x2 + x1",
+    "loss": 0.43504742
+}

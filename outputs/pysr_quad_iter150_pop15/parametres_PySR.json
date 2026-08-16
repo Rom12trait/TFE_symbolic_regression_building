@@ -1,0 +1,7 @@
+{
+    "model_type": "PySRThermalModel",
+    "random_state": 42,
+    "training_date": "2026-07-16 17:30:47",
+    "equation": "x0 + hvac_eff((hvac_eff((x2 - x1) + (x0 + x0), 0.37956628) + x1) - (x0 - x2), 0.37956628)",
+    "loss": 0.19447543
+}

@@ -1,0 +1,20 @@
+{
+    "model_type": "RestrictedQuadraticModel",
+    "random_state": 42,
+    "training_date": "2026-05-28 14:41:26",
+    "intercept": 0.6762327291352825,
+    "coef": [
+        0.9654670183771941,
+        0.02039958216804072,
+        6.517551778675856e-06,
+        0.00038276079371756195,
+        -0.0008876068822473524
+    ],
+    "variables_structure": [
+        "T",
+        "Tout",
+        "Q",
+        "Tout^2",
+        "T*Tout"
+    ]
+}
