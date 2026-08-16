@@ -392,7 +392,6 @@ def aggregate_comparison():
 
     return final_15min, final_24h
 
-
 def export_to_latex_comparison(df, filename, caption):
     # Arrondi global
     df = df.round(3)
