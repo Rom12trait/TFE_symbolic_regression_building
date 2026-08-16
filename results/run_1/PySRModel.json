@@ -1,9 +1,0 @@
-{
-    "model_type": "PySRModel",
-    "random_state": 42,
-    "is_fitted": true,
-    "training_date": "2026-02-17 13:49:34",
-    "equation": "x0 + 4.447322e-6",
-    "complexity": 3,
-    "loss": 0.0019858237
-}

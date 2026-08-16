@@ -578,43 +578,45 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     q_base_97 = np.append(q_base_96, q_base_96[-1])
 
     # Figure 3 : Puissances électriques - 96 points étendus à 97 pour le tracé 'post'
-    p_heat_opt_97 = np.append(res_opt['P_heating'], res_opt['P_heating'][-1])
-    p_cool_opt_97 = np.append(-np.array(res_opt['P_cooling']), -res_opt['P_cooling'][-1])
+    p_heat_opt_97 = (np.append(res_opt['P_heating'], res_opt['P_heating'][-1]))/1000
+    p_cool_opt_97 = (np.append(-np.array(res_opt['P_cooling']), -res_opt['P_cooling'][-1]))/1000
 
     dt_sec = 900
     p_heat_ep_96 = (df_resampled_real['Heating:Electricity'] / dt_sec).values
     p_cool_ep_96 = -(df_resampled_real['Cooling:Electricity'] / dt_sec).values
-    p_heat_ep_97 = np.append(p_heat_ep_96, p_heat_ep_96[-1])
-    p_cool_ep_97 = np.append(p_cool_ep_96, p_cool_ep_96[-1])
+    p_heat_ep_97 = (np.append(p_heat_ep_96, p_heat_ep_96[-1]))/1000
+    p_cool_ep_97 = (np.append(p_cool_ep_96, p_cool_ep_96[-1]))/1000
 
     p_heat_base_96 = (df_resampled_base['Heating:Electricity [J](TimeStep)'] / dt_sec).values
     p_cool_base_96 = -(df_resampled_base['Cooling:Electricity [J](TimeStep)'] / dt_sec).values
-    p_heat_base_97 = np.append(p_heat_base_96, p_heat_base_96[-1])
-    p_cool_base_97 = np.append(p_cool_base_96, p_cool_base_96[-1])
+    p_heat_base_97 = (np.append(p_heat_base_96, p_heat_base_96[-1]))/1000
+    p_cool_base_97 = (np.append(p_cool_base_96, p_cool_base_96[-1]))/1000
 
     # Figure 4 : Coûts au quart d'heure - 96 points étendus à 97 pour le tracé 'post'
-    cost_opt_97 = np.append(res_opt['Step_Costs'], res_opt['Step_Costs'][-1])
-    cost_real_97 = np.append(df_resampled_real['step_cost_real'].values, df_resampled_real['step_cost_real'].values[-1])
-    cost_base_97 = np.append(df_resampled_base['step_cost_real'].values, df_resampled_base['step_cost_real'].values[-1])
+    cost_opt_97 = (np.append(res_opt['Step_Costs'], res_opt['Step_Costs'][-1]))*1000
+    cost_real_97 = (np.append(df_resampled_real['step_cost_real'].values, df_resampled_real['step_cost_real'].values[-1]))*1000
+    cost_base_97 = (np.append(df_resampled_base['step_cost_real'].values, df_resampled_base['step_cost_real'].values[-1]))*1000
 
 
     #--- création graphes ---
     # --- FIGURE 1 : COMPARAISON TEMPÉRATURES ET BORNES DYNAMIQUES (SLACKS) ---
     plt.figure()
-    plt.plot(hours_97, t_opt_97, 'r--', label="T_zone Opti (Consigne)", linewidth=2)
-    plt.plot(hours_97, t_real_97, 'b-', label="T_zone EnergyPlus (Réel Ex-post)", alpha=0.8)
-    plt.plot(hours_97, t_base_97, 'k-', label="Baseline (Thermostat Standard)", alpha=0.4)
+    plt.plot(hours_97, t_opt_97, 'r--', label="Opti", linewidth=2)
+    plt.plot(hours_97, t_real_97, 'b-', label="Ex-post E+", alpha=0.8)
+    plt.plot(hours_97, t_base_97, 'k-', label="Baseline E+", alpha=0.4)
 
     # Bornes en escalier (slacks incluses) qui s'étirent proprement jusqu'à 24h00
     plt.step(hours_97, low_borne_97, where='post', color='darkred', linestyle=':', alpha=0.6,
-             label="Bornes Confort Dynamiques")
+             label="Bornes")
     plt.step(hours_97, high_borne_97, where='post', color='darkred', linestyle=':', alpha=0.6)
 
-    plt.title(f"Profils des Températures de Zone - {day_str}", fontweight='bold')
-    plt.ylabel("Température [°C]")
-    plt.xlabel("Heure [h]")
+    #plt.title(f"Profils des Températures de Zone - {day_str}", fontweight='bold')
+    plt.ylabel("Température [°C]", fontsize= 14)
+    plt.yticks(fontsize=14)
+
+    plt.xlabel("Heure", fontsize= 14)
     plt.xlim(0, 24)
-    plt.xticks(np.arange(0, 25, 2))
+    plt.xticks(np.arange(0, 25, 2), fontsize= 14)
     plt.legend(loc='best', fontsize='small')
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.tight_layout()
@@ -624,16 +626,18 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
 
     # --- FIGURE 2 : COMPARAISON PUISSANCES THERMIQUES (Q_hvac) ---
     plt.figure()
-    plt.step(hours_97, q_opt_97, where='post', label="Q_hvac Opti (Théorique)", color='red', alpha=0.6, linewidth=1.5)
-    plt.step(hours_97, q_real_97, where='post', label="Q_hvac EnergyPlus (Réel Ex-post)", color='blue', alpha=0.7,
+    plt.step(hours_97, q_opt_97, where='post', label="Opti", color='red', alpha=0.6, linewidth=1.5)
+    plt.step(hours_97, q_real_97, where='post', label="Ex-post E+", color='blue', alpha=0.7,
              linewidth=1.2)
-    plt.step(hours_97, q_base_97, where='post', label="Q_hvac Baseline", color='gray', alpha=0.4)
+    plt.step(hours_97, q_base_97, where='post', label="Baseline E+", color='gray', alpha=0.4)
 
-    plt.title(f"Profils des Puissances Thermiques - {day_str}", fontweight='bold')
-    plt.ylabel("Puissance Thermique [W]")
-    plt.xlabel("Heure [h]")
+    #plt.title(f"Profils des Puissances Thermiques - {day_str}", fontweight='bold')
+    plt.ylabel("Puissance Thermique [W]", fontsize= 14)
+    plt.yticks(fontsize=14)
+
+    plt.xlabel("Heure", fontsize= 14)
     plt.xlim(0, 24)
-    plt.xticks(np.arange(0, 25, 2))
+    plt.xticks(np.arange(0, 25, 2), fontsize=14)
     plt.axhline(0, color='black', linewidth=0.8, alpha=0.3)
     plt.legend(loc='best', fontsize='small')
     plt.grid(True, linestyle=':', alpha=0.6)
@@ -649,18 +653,21 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
     plt.step(hours_97, p_cool_opt_97, 'r--', where='post', label="P_cool Opti", alpha=0.5)
 
     # Tracés EnergyPlus Réel Ex-post (Paliers lissés corrigés à 900s)
-    plt.step(hours_97, p_heat_ep_97, where='post', label="P_heat E+ (Réel)", color='blue', alpha=0.8, linewidth=1.2)
-    plt.step(hours_97, p_cool_ep_97, 'b--', where='post', label="P_cool E+ (Réel)", alpha=0.8, linewidth=1.2)
+    plt.step(hours_97, p_heat_ep_97, where='post', label="P_heat E+", color='blue', alpha=0.8, linewidth=1.2)
+    plt.step(hours_97, p_cool_ep_97, 'b--', where='post', label="P_cool E+ ", alpha=0.8, linewidth=1.2)
 
     # Tracés Baseline
     plt.step(hours_97, p_heat_base_97, where='post', label="P_heat Baseline", color='black', alpha=0.3)
     plt.step(hours_97, p_cool_base_97, where='post', label="P_cool Baseline", color='grey', alpha=0.3)
 
-    plt.title(f"Profils des Puissances Électriques HVAC - {day_str}", fontweight='bold')
-    plt.ylabel("Puissance Électrique [W] (cooling < 0)")
-    plt.xlabel("Heure de la journée [h]")
+    #plt.title(f"Profils des Puissances Électriques HVAC - {day_str}", fontweight='bold')
+    plt.ylabel("Puissance Électrique [kW]", fontsize= 14)
+    plt.yticks(fontsize=14)
+
+    plt.xlabel("Heure", fontsize= 14)
+
     plt.xlim(0, 24)
-    plt.xticks(np.arange(0, 25, 2))
+    plt.xticks(np.arange(0, 25, 2), fontsize=14)
     plt.axhline(0, color='black', linewidth=0.8, alpha=0.3)
     plt.legend(loc='best', fontsize='small')
     plt.grid(True, linestyle=':', alpha=0.6)
@@ -671,15 +678,16 @@ def plot_comparison_results_api(day_str, res_opt, df_cleaned, df_baseline, outpu
 
     # --- FIGURE 4 : COÛTS FINANCIERS AU QUART D'HEURE ---
     plt.figure()
-    plt.step(hours_97, cost_real_97, where='post', color='blue', linewidth=1.5, label="Coût Ex-post E+")
-    plt.step(hours_97, cost_base_97, where='post', color='grey', linewidth=1.5, label="Coût Baseline E+")
-    plt.step(hours_97, cost_opt_97, where='post', color='red', alpha=0.7, linewidth=1.5, label="Coût Prédit Opti")
+    plt.step(hours_97, cost_real_97, where='post', color='blue', linewidth=1.5, label="Ex-post E+")
+    plt.step(hours_97, cost_base_97, where='post', color='grey', linewidth=1.5, label="Baseline E+")
+    plt.step(hours_97, cost_opt_97, where='post', color='red', alpha=0.7, linewidth=1.5, label="Opti")
 
-    plt.title(f" Coûts d'Électricité par Quart d'Heure - {day_str}", fontweight='bold')
-    plt.ylabel("Coût du pas de temps [€]")
-    plt.xlabel("Heure de la journée [h]")
+    #plt.title(f" Coûts d'Électricité par Quart d'Heure - {day_str}", fontweight='bold')
+    plt.ylabel("Coût quart d'Heure [m€]", fontsize= 14)
+    plt.yticks(fontsize=14)
+    plt.xlabel("Heure", fontsize= 14)
     plt.xlim(0, 24)
-    plt.xticks(np.arange(0, 25, 2))
+    plt.xticks(np.arange(0, 25, 2), fontsize=14)
     plt.legend(loc='best')
     plt.grid(True, linestyle=':', alpha=0.7)
     plt.tight_layout()
@@ -712,17 +720,18 @@ def plot_global_costs_bar_chart(all_stats_list, all_stats_list_sans_opti, name, 
     fig, ax = plt.subplots(figsize=(14, 6))
 
     # Tracé des 3 groupes de bâtonnets
-    rects1 = ax.bar(x - width, cost_baseline, width, label='Baseline EnergyPlus', color='gray', alpha=0.7)
-    rects2 = ax.bar(x, cost_opti, width, label='Optimisation (Théorique)', color='red')
-    rects3 = ax.bar(x + width, cost_expost, width, label='Ex-post EnergyPlus (Réel)', color='blue')
+    rects1 = ax.bar(x - width, cost_baseline, width, label='Baseline E+', color='gray', alpha=0.7)
+    rects2 = ax.bar(x, cost_opti, width, label='Optimisation', color='red')
+    rects3 = ax.bar(x + width, cost_expost, width, label='Ex-post E+', color='blue')
 
     # 3. Personnalisation des axes et légendes
-    ax.set_ylabel('Coût Total du Jour [€]', fontsize=11, fontweight='bold')
-    ax.set_title(f'Comparaison des Coûts Totaux Journaliers - Modèle {name}', fontsize=13, fontweight='bold', pad=15)
+    ax.set_ylabel('Coût Total [€]', fontweight='bold', fontsize= 14) #, fontsize=11
+    ax.tick_params(axis='y', labelsize=14)
+    # #ax set_title(f'Comparaison des Coûts Totaux Journaliers - Modèle {name}', fontsize=13, fontweight='bold', pad=15)
     ax.set_xticks(x)
-    ax.set_xticklabels(days, rotation=45, ha='right')
+    ax.set_xticklabels(days, rotation=45, ha='right', fontsize= 13)
     ax.grid(True, linestyle=':', alpha=0.6, axis='y')
-    ax.legend(loc='upper right', fontsize=10)
+    ax.legend(loc='upper right') #, fontsize=10
 
     # 4. Ajout des valeurs au-dessus des barres pour la lisibilité
     def autolabel(rects):
@@ -734,9 +743,9 @@ def plot_global_costs_bar_chart(all_stats_list, all_stats_list_sans_opti, name, 
                         textcoords="offset points",
                         ha='center', va='bottom', fontsize=8, rotation=45)
 
-    autolabel(rects1)
-    autolabel(rects2)
-    autolabel(rects3)
+    #autolabel(rects1)
+    #autolabel(rects2)
+    #autolabel(rects3)
     plt.tight_layout()
     plt.savefig(f"{output_dir}/Comparaison_Globale_Couts_12jours.pdf")
     plt.savefig(f"{output_dir}/Comparaison_Globale_Couts_12jours.png")
@@ -981,12 +990,16 @@ def plot_model_cuts_comparison(model_linear_func, model_quadratic_func, output_d
     T_next_lin_Q = [model_linear_func(T_fixed, Tout_fixed, q) for q in Q_range]
     T_next_quad_Q = [model_quadratic_func(T_fixed, Tout_fixed, q) for q in Q_range]
 
-    plt.figure(figsize=(9, 5))
-    plt.plot(Q_range, T_next_lin_Q, label="Modèle Linéaire", color="red", linestyle="--", linewidth=1.5)
-    plt.plot(Q_range, T_next_quad_Q, label="Modèle Quadratique", color="blue", linewidth=2)
-    plt.title(f"Coupe Thermique : Impact de Qhvac ($Q$) à $T_{{in}}$={T_fixed}°C et $T_{{out}}$={Tout_fixed}°C")
-    plt.xlabel("Puissance Thermique HVAC $Q$ [W] (Chauffage > 0, Clim < 0)")
-    plt.ylabel("$T_{{next}}$ après 15 min [°C]")
+    plt.figure() #figsize=(9, 5)
+    plt.plot(Q_range, T_next_lin_Q, label="RL A.D.", color="red", linestyle="--", linewidth=1.5)
+    plt.plot(Q_range, T_next_quad_Q, label="RQ A.D.", color="blue", linewidth=2)
+    #plt.title(f"Coupe Thermique : Impact de Qhvac ($Q$) à $T_{{in}}$={T_fixed}°C et $T_{{out}}$={Tout_fixed}°C")
+    plt.xlabel("Puissance Thermique $Q_{{HVAC}}$(k) [W] ",fontsize=14)
+    plt.ylabel("$T_{{zone}}$(k+1) [°C]",fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.xticks(fontsize= 14)
+
+
     plt.grid(True, linestyle=":", alpha=0.6)
     plt.legend()
     plt.tight_layout()
@@ -1005,13 +1018,17 @@ def plot_model_cuts_comparison(model_linear_func, model_quadratic_func, output_d
     T_next_lin_Tout = [model_linear_func(T_fixed_2, tout, Q_fixed_2) for tout in Tout_range]
     T_next_quad_Tout = [model_quadratic_func(T_fixed_2, tout, Q_fixed_2) for tout in Tout_range]
 
-    plt.figure(figsize=(9, 5))
-    plt.plot(Tout_range, T_next_lin_Tout, label="Modèle Linéaire (Pente fixe)", color="red", linestyle="--",
+    plt.figure()
+    plt.plot(Tout_range, T_next_lin_Tout, label="RL A.D.", color="red", linestyle="--",
              linewidth=1.5)
-    plt.plot(Tout_range, T_next_quad_Tout, label="Modèle Quadratique (Courbure)", color="blue", linewidth=2)
-    plt.title(f"Coupe Thermique : Dérive Passive ($Q=0$W) à $T_{{in}}$={T_fixed_2}°C")
-    plt.xlabel("Température Extérieure $T_{out}$ [°C]")
-    plt.ylabel("$T_{{next}}$ après 15 min [°C]")
+    plt.plot(Tout_range, T_next_quad_Tout, label="RQ A.D.", color="blue", linewidth=2)
+    #plt.title(f"Coupe Thermique : Dérive Passive ($Q=0$W) à $T_{{in}}$={T_fixed_2}°C")
+    plt.xlabel("Température Extérieure $T_{out}$(k)[°C]",fontsize=14)
+    plt.ylabel("$T_{{zone}}$(k+1) [°C]",fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.xticks(fontsize= 14)
+
+
     plt.grid(True, linestyle=":", alpha=0.6)
     plt.legend()
     plt.tight_layout()
@@ -1030,13 +1047,17 @@ def plot_model_cuts_comparison(model_linear_func, model_quadratic_func, output_d
     T_next_lin_T = [model_linear_func(t, Tout_fixed_3, Q_fixed_3) for t in T_range]
     T_next_quad_T = [model_quadratic_func(t, Tout_fixed_3, Q_fixed_3) for t in T_range]
 
-    plt.figure(figsize=(9, 5))
-    plt.plot(T_range, T_next_lin_T, label="Modèle Linéaire", color="red", linestyle="--", linewidth=1.5)
-    plt.plot(T_range, T_next_quad_T, label="Modèle Quadratique (Effet couplé $T \\times T_{out}$)", color="blue",
-             linewidth=2)
-    plt.title(f"Coupe Thermique : Sensibilité à $T_{{zone}}$ ($Q$={Q_fixed_3}W, $T_{{out}}$={Tout_fixed_3}°C)")
-    plt.xlabel("Température Actuelle de la Zone $T_{zone}$ [°C]")
-    plt.ylabel("$T_{{next}}$ après 15 min [°C]")
+    plt.figure()
+    plt.plot(T_range, T_next_lin_T, label="RL A.D.", color="red", linestyle="--", linewidth=1.5)
+    plt.plot(T_range, T_next_quad_T, label="RQ A.D.", color="blue",
+             linewidth=2) #Modèle Quadratique (Effet couplé $T \\times T_{out}$)"
+    #plt.title(f"Coupe Thermique : Sensibilité à $T_{{zone}}$ ($Q$={Q_fixed_3}W, $T_{{out}}$={Tout_fixed_3}°C)")
+    plt.xlabel("Température Actuelle de la Zone $T_{zone}$(k) [°C]",fontsize=14)
+    plt.ylabel("$T_{{zone}}$(k+1) [°C]",fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.xticks(fontsize=14)
+
+
     plt.grid(True, linestyle=":", alpha=0.6)
     plt.legend()
     plt.tight_layout()
@@ -1044,3 +1065,108 @@ def plot_model_cuts_comparison(model_linear_func, model_quadratic_func, output_d
     plt.savefig(f"{output_dir}/Coupe_Sensibilite_Tzone.png", dpi=300)
     plt.close('all')
 
+
+def generate_tfe_summary_line(model_name ,file_path_exp, output_path, output_tex_path):
+    """
+    Lit les fichiers de validation ex-post des deux modèles (exp et cube),
+    calcule la ligne de synthèse (Sommes et Moyennes configurées) pour chacun,
+    et retourne un DataFrame combiné pour le corps du texte du TFE.
+    """
+
+    models_data = {
+        model_name: file_path_exp
+    }
+
+    summary_rows = []
+
+    for model_name, path in models_data.items():
+        # Lecture du fichier (on suppose que les colonnes collent exactement à l'image)
+        df = pd.read_excel(path, sheet_name='Resume_Global')
+
+        # Nettoyage au cas où une ligne 'TOTAL' existe déjà dans votre fichier original
+        #df = df[df['Day'].astype(str).str.contains('2025')]
+
+        # Calcul des agrégations spécifiques
+        metrics_dict = {
+            'Modèle': model_name,
+            'Total Cost Opti [€]': round(df['Cost_Opti'].sum(), 2),
+            'Total Cost Ex-post [€]': round(df['Cost_Real'].sum(), 2),
+            'Total Diff [€]': round(df['Difference_Euro'].sum(), 2),
+            'Moy RMSE Temp [°C]': round(df['RMSE_Temp'].mean(), 2),
+            'Moy RMSE Power [W]': round(df['RMSE_Power_W'].mean(), 2),
+            'Moy MAPE P [%]': round(df['MAPE_Power_Pct'].mean(), 1),
+            'Total Energ Opti [kWh]': round(df['Energy_Opti_kWh'].sum(), 1),
+            'Total Energ Ex-post [kWh]': round(df['Energy_Real_kWh'].sum(), 1),
+            'Total P_Avg_Opti [W]': round(df['P_Avg_Opti_W'].mean(), 1),
+            'Total P_Avg_Real [W]': round(df['P_Avg_Real_W'].mean(), 1),
+        }
+
+        summary_rows.append(metrics_dict)
+
+    df_summary = pd.DataFrame(summary_rows)
+
+    df_summary.to_excel(output_path, index=False)
+
+    # Nettoyage des en-têtes pour LaTeX (suppression des caractères spéciaux problématiques)
+    # On remplace les crochets [€] par des parenthèses ou du texte propre à LaTeX
+    df_summary.columns = [
+        str(c).replace(' [€]', ' (€)')
+        .replace(' [°C]', ' (°C)')
+        .replace(' [W]', ' (W)')
+        .replace(' [%]', ' (\\%)')
+        .replace(' [kWh]', ' (kWh)')
+        .replace('Moyenne ', '$\\overline{\\text{' + 'BC' + '}}$ ')  # Prépare une notation moyenne propre
+        for c in df_summary.columns
+    ]
+
+    # Correction manuelle pour l'écriture de la moyenne statistique (ex: \bar{RMSE})
+    df_summary.columns = [
+        c.replace('$\\overline{\\text{BC}}$ RMSE Temp', '$\\overline{\\text{RMSE}}$ Temp')
+        .replace('$\\overline{\\text{BC}}$ RMSE Power', '$\\overline{\\text{RMSE}}$ Puissance')
+        .replace('$\\overline{\\text{BC}}$ MAPE P', '$\\overline{\\text{MAPE}}$ ($P$)')
+        for c in df_summary.columns
+    ]
+
+    # 3. Alignement : Première colonne à gauche (l), toutes les autres centrées (c)
+    num_cols = len(df_summary.columns)
+    column_format = "l" + "c" * (num_cols - 1)
+
+    # Génération du code LaTeX style académique
+    # On utilise float_format pour forcer l'affichage uniforme (ex: deux décimales pour les coûts)
+    latex_table = df_summary.to_latex(
+        index=False,
+        column_format=column_format,
+        float_format="%.2f",
+        caption="Synthèse comparative des performances ex-post cumulées sur les 12 journées de test.",
+        label="tab:synthese_globale_expost",
+        position="htb"  # Placement standard (here, top, bottom)
+    )
+
+    # Amélioration esthétique pour le document final
+    # On ajoute des commandes de redimensionnement pour s'assurer que le tableau rentre dans la largeur du texte
+    latex_custom = (
+        "\\begin{table}[htb]\n"
+        "\\centering\n"
+        "\\begin{small}\n"  # Réduction légère de la police pour le confort visuel
+    )
+
+    # On isole le cœur de la table générée par pandas (tabular)
+    lines = latex_table.split('\n')
+    tabular_started = False
+
+    for line in lines:
+        if "\\begin{tabular}" in line:
+            latex_custom += line + "\n"
+            tabular_started = True
+            continue
+        if tabular_started:
+            if "\\end{table}" in line:
+                continue  # On ignore la balise de fin par défaut pour mettre la nôtre
+            latex_custom += line + "\n"
+
+    latex_custom += "\\end{small}\n\\end{table}\n"
+
+    # Sauvegarde du fichier .tex
+    with open(output_tex_path, "w", encoding="utf-8") as f:
+        f.write(latex_custom)
+    return df_summary

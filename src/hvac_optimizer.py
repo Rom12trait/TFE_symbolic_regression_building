@@ -192,15 +192,69 @@ class HVACOptimizer:
             # Gurobi est ok pour le linéaire
             opt = pyo.SolverFactory('gurobi')
         else:
+            opt = pyo.SolverFactory('ipopt')
             # Pour tout ce qui est quadratique ou symbolique non-linéaire
             #opt = pyo.SolverFactory('couenne', solver_io='asl', executable = "C:/Users/Corentin/PycharmProjects/thermal-dynamics-symbolic-regression/.venv/Scripts/couenne.exe") #ipopt
             # Temps de calcul maximum de 60 secondes par journée
             #opt.options['time_limit'] = 60
-            opt = pyo.SolverFactory('asl')
-            opt.set_executable(
-                "C:/Users/Corentin/PycharmProjects/thermal-dynamics-symbolic-regression/.venv/Scripts/couenne.exe")
-            opt.options['solver'] = 'couenne'
+            #opt = pyo.SolverFactory('asl')
+            #opt.set_executable(
+             #   "C:/Users/Corentin/PycharmProjects/thermal-dynamics-symbolic-regression/.venv/Scripts/couenne.exe")
+            #opt.options['solver'] = 'couenne'
             # Options reconnues par l'interface ASL native
 
         results = opt.solve(model, tee=True)
         return model, results
+
+    def post_process_hvac_simultaneity(self, model_resolved, prices_vector, eta_h=1.86, eta_c=3.73, dt=0.25):
+        """
+        Supprime la simultanéité chauffage/climatisation induite par Ipopt (notamment lors des prix négatifs),
+        ajuste les puissances électriques pour conserver le Qhvac net intact (préservant T_zone),
+        et recalcule les coûts corrigés.
+        """
+
+        T_indices = list(model_resolved.T)
+
+        # 1. Listes de réception pour les profils corrigés
+        p_heat_corr = []
+        p_cool_corr = []
+        cout_instant_corr = []
+
+        total_cost_corr = 0.0
+
+        for t in T_indices:
+            # Récupération des valeurs optimisées par Ipopt
+            ph_raw = pyo.value(model_resolved.P_heating[t])
+            pc_raw = pyo.value(model_resolved.P_cooling[t])
+            prix_t = prices_vector[t]
+
+            # 2. Calcul du Qhvac net visé par le solveur
+            q_hvac_net = (eta_h * ph_raw) - (eta_c * pc_raw)
+
+            # 3. Application de l'équivalence physique sans simultanéité
+            if q_hvac_net > 1e-3:  # Besoin de Chauffage net (seuil pour filtrer le bruit numérique)
+                ph_new = q_hvac_net / eta_h
+                pc_new = 0.0
+            elif q_hvac_net < -1e-3:  # Besoin de Climatisation nette
+                ph_new = 0.0
+                pc_new = -q_hvac_net / eta_c
+            else:  # Flux quasi nul ou nul
+                ph_new = 0.0
+                pc_new = 0.0
+
+            # 4. Recalcul du coût pour ce pas de temps (Wh -> kW => /1000)
+            # Cout = Puissance(W) * prix(€/kWh) / 1000 * dt(h)
+            puissance_appelee = ph_new + pc_new
+            cost_t = prix_t * (puissance_appelee) / 1000.0 * dt
+
+            # Stockage
+            p_heat_corr.append(ph_new)
+            p_cool_corr.append(pc_new)
+            cout_instant_corr.append(cost_t)
+
+            total_cost_corr += cost_t
+
+        # 5. Extraction de T_zone (inchangée car Qhvac est conservé)
+        t_zone_opt = [pyo.value(model_resolved.T_zone[t]) for t in model_resolved.T_instants]
+
+        return p_heat_corr, p_cool_corr, t_zone_opt, cout_instant_corr, total_cost_corr

@@ -1,9 +1,0 @@
-{
-    "model_type": "PySRModel",
-    "random_state": 42,
-    "is_fitted": true,
-    "training_date": "2026-02-24 11:30:49",
-    "equation": "((x1 * 0.0005606308) + (x0 * 0.99406433)) + 0.12936845",
-    "complexity": 9,
-    "loss": 0.0019778654
-}
