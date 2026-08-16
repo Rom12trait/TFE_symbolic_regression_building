@@ -57,7 +57,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 # 2. INSTANCIATION DES MODÈLES
 models = {
-    #"RC": physical_models.RCModel(R=0.008636689, C=27.14e6),
+    #"RC": physical_models.RCModel(R=0.008636689, C=27.14e6), #valeur RC calculé manuellement sur base de l'idf
     #"Linear": regression_models.PolynomialThermalModel(degree=1),
     #"Quadratic": regression_models.RestrictedQuadraticModel(),  #regression_models.PolynomialThermalModel(degree=2),
     "PySR": symbolic_models.PySRThermalModel(niterations=80),
@@ -85,7 +85,7 @@ for config in simulations_config:
     complexity_of_constants = config["complexity_of_constants"]
 
     print(f"\n=========================================================================")
-    print(f"🚀 LANCEMENT DE LA SIMULATION : {run_id}")
+    print(f" LANCEMENT DE LA SIMULATION : {run_id}")
     print(f"Configurations : Iterations={n_iter} | Populations={n_pop}")
     print(f"=========================================================================")
 

@@ -1,7 +1,7 @@
 import pandas as pd
 from eppy.modeleditor import IDF
 
-idf_file= "../dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf"
+idf_file= "../../dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf"
 idd_file = "C:/Users/Corentin/energyplus/Energy+.idd"
 
 IDF.setiddname(idd_file)

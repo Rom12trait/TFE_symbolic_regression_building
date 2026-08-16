@@ -2,12 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 # 1. Charger le fichier de consigne
-df_input = pd.read_csv('../dataset/ModeleHabitation/consignes_hvac.csv', names=['Heating_Setpoint', 'Cooling_Setpoint'])
+df_input = pd.read_csv('../../dataset/ModeleHabitation/consignes_hvac.csv', names=['Heating_Setpoint', 'Cooling_Setpoint'])
 timestep = 15  # minutes
 rows_per_day = int(24 * 60 / timestep)  # 96
 design_days = 2 * rows_per_day + 1
 # 2. Charger le résultat d'EnergyPlus (celui qui sort du run)
-df_res = pd.read_csv('../dataset/ModeleHabitation/model_annee_dynamique.csv', sep=";", skiprows=range (1, design_days))
+df_res = pd.read_csv('../../dataset/ModeleHabitation/model_annee_dynamique.csv', sep=";", skiprows=range (1, design_days))
 # Nettoyage des espaces dans les noms de colonnes
 df_res.columns = [c.strip() for c in df_res.columns]
 
