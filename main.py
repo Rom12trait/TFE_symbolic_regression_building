@@ -63,6 +63,7 @@ models = {
     "PySR": symbolic_models.PySRThermalModel(niterations=80),
     #"PySR_cube": symbolic_models.PySRThermalModel(niterations=150)
 }
+
 simulations_config = [
     {
         "run_id": "pysr_square_n120_p20_1step",
