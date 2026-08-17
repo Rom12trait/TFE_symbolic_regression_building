@@ -32,10 +32,11 @@ Dans le main est repris tout le code pour l'identification et l'entrainement des
    ```bash
    git clone https://github.com/Rom12trait/TFE_symbolic_regression_building.git
 
-   Créez et activez un environnement virtuel Python 3.8+ (venv).
-Installez les dépendances :
-pip install -r requirements.txt
-Assurez-vous d’avoir installé Julia (utilisé par PySR) et Pyomo, Gurobi (pour la programmation linéaire) ou Ipopt (pour la programmation non-linéaire).
+2. Créez et activez un environnement virtuel Python 3.8+ (venv).
+3. Installez les dépendances :
+   ```bash
+   pip install -r requirements.txt
+4. Assurez-vous d’avoir installé Julia (utilisé par PySR) et Pyomo, Gurobi (pour la programmation linéaire) ou Ipopt (pour la programmation non-linéaire).
 
 ## Usage
 
