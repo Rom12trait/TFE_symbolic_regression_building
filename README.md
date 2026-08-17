@@ -15,14 +15,27 @@ L’étude met en lumière le potentiel prometteur de la régression symbolique,
 
 
 ## Structure du projet
-Dans le main est repris tout le code pour l'identification, l'optimisation et la validation ex-post EnergyPlus.
-Le dataset contient toutes les données liées au modèle d'habitation, la météorologie, les données d'entrainement d'EnergyPlus ainsi que les prix du marché Day-Ahead utilisé.
-OptiV4 reprend tout les résultats et graphiques de l'optimisation pour les modèles.
-ApiV4 reprend les résultats de validation pour chaque modèle.
-Le dossier results contient les résultats linéaires pour l'année classique dans LinearV2_annee_classique ainsi que les résultats linéaires et non-linéaire de l'année dynamique dans LinearV2_annee_dyn.
-Outputs reprend les résultats de toutes les simulations PySR effectué.
+- `src/` : code source Python comprenant les modèles thermiques (régression symbolique PySR dans symbolic_models.py, modèles de régression dans regression_models.py, 1R1C dans physical_models), l’optimiseur HVAC dans hvac_optimizer.py. L'API d'EnergyPlus a été construit au moyen des fichiers api_validator.py, building_model.py et opti.py. Le sous-dossier dataset contient des codes pour créer données de consigne thermostat et schedulefile pour EnergyPlus. 
+- `dataset/` : contient toutes les données liées au modèle d'habitation, la météorologie, les données d'entrainement d'EnergyPlus ainsi que les prix du marché Day-Ahead utilisé.
+- `optiV4/` : résultats des optimisations sur les 12 jours, fichiers Excel de synthèse et graphiques pour chaque modèle.  
+- `ApiV4/` : résultats des validations ex-post sur les 12 jours, fichiers Excel de synthèse et graphiques pour chaque modèle.
+- `results/` : résultats linéaires pour l'année classique dans LinearV2_annee_classique ainsi que les résultats linéaires et non-linéaire de l'année dynamique dans LinearV2_annee_dyn.
+- `outputs/` : résultats de PySR durant mon exploration de celui-ci quand j'essayais d'obtenir une équation quadratique (les dossiers pysr_square), une équation logarithmique (dossier pysr_log). Equation quadratique avec delta T en sortie (au lieu de Tzone après 15min) (dossiers pysr_quad_delta) ou avec un gradiant sur Tout (Tzone-Tout) en entrée (dossiers pysr_quad_gradientTout). Le dossier pysr_quad_iter200_pop30 reprend l'équation cubique trouvée par PySR. Recherche d'équations exponentielles (dossiers pysr_exp) : le plus intéressant est pysr_exp_n150_p20 qui est ma meilleure équation exponentielle trouvée.
+
+
+Dans le main est repris tout le code pour l'identification et l'entrainement des modèles, l'optimisation des coûts et la validation ex-post par API EnergyPlus.
+
 
 ## Installation et pré-requis
+
+1. Clonez ce dépôt :  
+   ```bash
+   git clone https://github.com/Rom12trait/TFE_symbolic_regression_building.git
+
+   Créez et activez un environnement virtuel Python 3.8+ (venv).
+Installez les dépendances :
+pip install -r requirements.txt
+Assurez-vous d’avoir installé Julia (utilisé par PySR) et Pyomo, Gurobi (pour la programmation linéaire) ou Ipopt (pour la programmation non-linéaire).
 
 ## Usage
 
