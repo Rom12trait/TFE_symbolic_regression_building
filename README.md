@@ -82,7 +82,7 @@ Avant de lancer le script, ajustez les variables principales selon vos besoins :
 Le script charge les fichiers de données selon le type d'année choisi (Classique ou Dynamique).
 * Les matrices de features $X$ (`Tzone`, `Tout`, `Qhvac`) et de cible $y$ (`Tzone_next`) sont extraites.
 * Un découpage `train_test_split` est appliqué.
-* **️Attention :** L'argument `shuffle` doit impérativement être configuré sur `False` lors de l'utilisation de PySR, car l'ordre chronologique des pas de temps (15 min) est essentiel pour sa fonction de coût temporelle.
+* ️**Attention :** L'argument `shuffle` doit impérativement être configuré sur `False` lors de l'utilisation de PySR, car l'ordre chronologique des pas de temps (15 min) est essentiel pour sa fonction de coût temporelle.
 
 #### 2. Identification et entraînement des modèles
 Cette étape est séparée en deux processus distincts :
@@ -94,7 +94,7 @@ Cette étape est séparée en deux processus distincts :
 
 #### 3. Résolution du problème d'optimisation HVAC
 Le modèle entraîné est couplé à la classe `HVACOptimizer` pour minimiser le coût financier sur le marché Day-Ahead (granularité 15 min) sur une sélection de 12 journées types.
-* **Intégration des équations :** Les structures linéaires et quadratiques sont lues automatiquement. Les équations complexes trouvées par PySR doivent être implémentées manuellement dans l'optimiseur (cubique, exponentielle) et activées via la variable `yeartype`. **️Attention :** pour effectuer l'optimisation pour PySR, il faut qu'un modèle PySR soit instancié dans le dictionnaire `models` afin qu'il puisse choisir l'équation. 
+* **Intégration des équations :** Les structures linéaires et quadratiques sont lues automatiquement. Les équations complexes trouvées par PySR doivent être implémentées manuellement dans l'optimiseur (cubique, exponentielle) et activées via la variable `yeartype`. ️**Attention :** pour effectuer l'optimisation pour PySR, il faut qu'un modèle PySR soit instancié dans le dictionnaire `models` afin qu'il puisse choisir l'équation. 
 * **Résolveurs mathématiques (Solvers) :** 
   * `Gurobi` est utilisé pour les formulations linéaires (permettant la gestion stricte des variables binaires d'exclusion Chauffage/Refroidissement).
   * `Ipopt` prend le relais pour les modèles non linéaires. 
@@ -192,7 +192,7 @@ Le tableau ci-dessous présente la synthèse comparative des performances entre 
 > * **A.C.** : Année Classique \| **A.D.** : Année Dynamique.
 > * **RL** : Régression Linéaire \| **RS** : Régression Symbolique.
 > 
-> 🛠 **Génération automatique :** L'extraction des données, l'agrégation sur les 12 jours et la mise en forme de ces lignes de résultats sont entièrement automatisées dans le projet via la fonction `communs.generate_tfe_summary_line()`.
+> **Génération automatique :** L'extraction des données, l'agrégation sur les 12 jours et la mise en forme de ces lignes de résultats sont entièrement automatisées dans le projet via la fonction `communs.generate_tfe_summary_line()`.
 
 Les résultats montrent que la régression symbolique, particulièrement dans sa version non linéaire cubique entraînée sur l’année dynamique, parvient à concilier interprétabilité et précision, en assurant une meilleure stabilité temporelle lors de simulations récursives et en réduisant significativement l’erreur sur les puissances HVAC. En optimisation ex-post, le modèle linéaire issu de la RS année dynamique permet quant à lui d’obtenir les coûts énergétiques les plus bas sur les journées testées. Les résultats obtenus avec la régression symbolique surpassent les performances des modèles classiques développés dans cette étude, tels que la régression linéaire, la régression quadratique et le modèle persistant, en termes de stabilité temporelle, de précision sur la puissance HVAC et de qualité des trajectoires générées dans un contexte d’optimisation intégrée aux signaux tarifaires du marché.
 
