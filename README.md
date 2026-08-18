@@ -173,7 +173,7 @@ Algorithm: Predictive Building HVAC Cost Optimization
 
 ## Performances comparatives (Synthèse sur 12 jours)
 
-Le tableau ci-dessous présente la synthèse comparative des performances entre l'optimisation théorique et la validation Ex-Post. Les valeurs de coûts et d'énergies sont cumulées sur l'ensemble des 12 journées de test, tandis que les métriques d'erreur représentent des moyennes.
+Le tableau ci-dessous présente la synthèse comparative des performances entre l'optimisation théorique et la validation Ex-Post, pour chaque modèle utilisé. Les valeurs de coûts et d'énergies sont cumulées sur l'ensemble des 12 journées de test, tandis que les métriques d'erreur représentent des moyennes pour chaque modèle.
 
 | Métrique | RL A.C. | RL A.D. | RS Lin. A.C. | RS Lin. A.D. | Régression quadratique A.D. | RS-cubique A.D. | RS Exp. A.D. |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
