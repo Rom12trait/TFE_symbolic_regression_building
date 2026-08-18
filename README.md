@@ -14,6 +14,7 @@ L’étude s’appuie sur deux jeux de données distincts : une « Année Classi
 L'architecture du dépôt est organisée de la manière suivante :
 
 ```text
+├── doc/                      # contient le rapport du travail de fin d'étude
 ├── dataset/                  # Données d'entrée (bâtiment, météo, prix Day-Ahead)
 │   ├── Meteo                 # données météorologiques
 │   ├── ModeleHabitation/     # Fichiers géométriques (.idf) et dictionnaires (.idd)  + année dynamique
