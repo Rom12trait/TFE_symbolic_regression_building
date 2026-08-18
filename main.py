@@ -23,7 +23,7 @@ from src.building_model import MediumOffice
 
 
 runfile="LinearV2_annee_dyn333" #LinearV2_annee_classique" #LinearV2_annee_dyn NonLinear_annee_dyn_ipopt
-yeartype = 'dynamique' #ou 'cube' 'exp' 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
+yeartype = 'dynamique' #ou 'cube' 'exp' 'dynamique' 'classique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
 version = 'V4'
 name = "PySR" # PySR_cube PySR_exp Quadratic PySR
 file_paths = ["Validation_EPlus_VS_Opti", "Validation_EPlus_sans_Opti"]
@@ -36,9 +36,9 @@ file_paths = ["Validation_EPlus_VS_Opti", "Validation_EPlus_sans_Opti"]
 randomstate=42
 #Charger les données
 #soit Année classique ou annee dyn
-#df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv")
+#df = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_airport_15min.csv") #année classique
 #df_test = communs.load_data("dataset/output_energyplus/US_SF_data_energyplus_Brussels_bel_15min.csv")
-df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv")
+df = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique.csv") #année dynamique
 df_test = communs.load_data("dataset/ModeleHabitation/model_annee_dynamique_brussel_bel.csv")
 idf = load_idf(
     "dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
@@ -63,21 +63,10 @@ models = {
     "Quadratic": regression_models.RestrictedQuadraticModel() #regression_models.PolynomialThermalModel(degree=2)
     #"PySR": symbolic_models.PySRThermalModel(niterations=80),
 }
-simulations_config = [
-    {
-        "run_id": "pysr_square_n120_p20_1step",
-        "niterations": 120,
-        "populations": 20,
-        "maxsize": 30,
-        "parsimony": 0.0005,
-        "complexity_of_constants": 2
-    },
 
-]
 #communs.generate_tfe_summary_line(name,f"api{version}/{name}_{runfile}/Validation_EPlus_VS_Opti.xlsx", f"api{version}/{name}_{runfile}/Resume_12jours.xlsx", f"api{version}/{name}_{runfile}/Resume_12jours.tex")
 
 #%%
-
 # =========================================================================
 # BOUCLE D'ENTRAÎNEMENT POUR LES MODÈLES CLASSIQUES
 # =========================================================================
@@ -179,6 +168,17 @@ for name, model in models.items():
 print("\n Toutes les simulations des modèles classiques sont terminées avec succès.")
 
 #%%
+simulations_config = [
+    {
+        "run_id": "pysr_square_n120_p20_1step",
+        "niterations": 120,
+        "populations": 20,
+        "maxsize": 30,
+        "parsimony": 0.0005,
+        "complexity_of_constants": 2
+    },
+
+]
 
 for config in simulations_config:
     run_id = config["run_id"]
