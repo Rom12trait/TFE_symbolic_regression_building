@@ -1,6 +1,6 @@
 # Travail de fin d'études: Symbolic Regression for Interpretable Modeling of Building Thermal Dynamics
 
-## Description
+## Contexte
 Cette étude explore une approche de modélisation interprétable de la dynamique thermique des bâtiments, basée sur la régression symbolique, afin d’optimiser efficacement les systèmes HVAC dans un contexte marqué par la transition énergétique et l’électrification rapide. Face à la croissance continue de la superficie bâtie mondiale et à la montée en puissance des pompes à chaleur, les bâtiments deviennent des acteurs majeurs du système électrique. Cette évolution soulève des défis techniques et économiques, notamment en matière de flexibilité et d’interactions avec les marchés de l’électricité à court terme (ex. marché day-ahead avec granularité de 15 minutes).
 
 L’objectif spécifique de ce travail est de développer des modèles dynamiques légers, robustes et surtout interprétables, capables de prédire la température intérieure d’une maison résidentielle unifamiliale à deux étages, modélisée comme une seule zone thermique. Ces modèles utilisent comme variables d’entrée la température extérieure, la température intérieure instantanée et la puissance thermique HVAC, avec pour sortie la température intérieure prédite 15 minutes après. Ils sont ensuite intégrés dans une optimisation coûts liée aux signaux tarifaires du marché day-ahead (15 min) et validés ex-post avec l'outil EnergyPlus.
