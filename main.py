@@ -22,7 +22,7 @@ from src.api_validator import EnergyPlusValidator
 from src.building_model import MediumOffice
 
 
-runfile="LinearV2_annee_dyn" #LinearV2_annee_classique" #LinearV2_annee_dyn NonLinear_annee_dyn_ipopt
+runfile="LinearV2_annee_dyn333" #LinearV2_annee_classique" #LinearV2_annee_dyn NonLinear_annee_dyn_ipopt
 yeartype = 'dynamique' #ou 'cube' 'exp' 'dynamique' important pour l'équation de pysr dans hvacoptimizer car j'ai dû brute force
 version = 'V4'
 name = "PySR" # PySR_cube PySR_exp Quadratic PySR
@@ -44,7 +44,7 @@ idf = load_idf(
     "dataset/ModeleHabitation/US+SF+CZ4C+hp+slab+IECC_2024_Brussels_airport_V2420.idf",
     "C:/Users/Corentin/energyplus/Energy+.idd"
 )
-data_annee = communs.load_data_api("opti/EPlus_run_20_24/model_annee_classique_20_24.csv") #dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv avant
+data_annee = communs.load_data_api("dataset/opti/EPlus_run_20_24/model_annee_classique_20_24.csv") #dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv avant
 
 X = df[["Tzone", "Tout", "Qhvac"]].values
 y = df["Tzone_next"].values
@@ -55,15 +55,14 @@ y = df["Tzone_next"].values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=randomstate, shuffle=False)
 
 
-# 2. INSTANCIATION DES MODÈLES
+# 2. INSTANCIATION DES MODÈLES CLASSIQUES
+# On les instancie directement ici puisqu'ils n'ont pas besoin de la boucle de configuration PySR
 models = {
-    #"RC": physical_models.RCModel(R=0.008636689, C=27.14e6), #valeur RC calculé manuellement sur base de l'idf
-    #"Linear": regression_models.PolynomialThermalModel(degree=1),
-    #"Quadratic": regression_models.RestrictedQuadraticModel(),  #regression_models.PolynomialThermalModel(degree=2),
-    "PySR": symbolic_models.PySRThermalModel(niterations=80),
-    #"PySR_cube": symbolic_models.PySRThermalModel(niterations=150)
+    "RC": physical_models.RCModel(R=0.008636689, C=27.14e6), #valeur RC calculé manuellement sur base de l'idf
+    "Linear": regression_models.PolynomialThermalModel(degree=1),
+    "Quadratic": regression_models.RestrictedQuadraticModel() #regression_models.PolynomialThermalModel(degree=2)
+    #"PySR": symbolic_models.PySRThermalModel(niterations=80),
 }
-
 simulations_config = [
     {
         "run_id": "pysr_square_n120_p20_1step",
@@ -76,7 +75,111 @@ simulations_config = [
 
 ]
 #communs.generate_tfe_summary_line(name,f"api{version}/{name}_{runfile}/Validation_EPlus_VS_Opti.xlsx", f"api{version}/{name}_{runfile}/Resume_12jours.xlsx", f"api{version}/{name}_{runfile}/Resume_12jours.tex")
+
 #%%
+
+# =========================================================================
+# BOUCLE D'ENTRAÎNEMENT POUR LES MODÈLES CLASSIQUES
+# =========================================================================
+# .items() est indispensable pour extraire le couple (clé, valeur) du dictionnaire
+for name, model in models.items():
+
+    print(f"\n=========================================================================")
+    print(f" LANCEMENT DE LA SIMULATION : {name}")
+    print(f"=========================================================================")
+
+    # 1. Dossier de destination unique basé sur runfile
+    save_dir = f"results/{runfile}"
+    os.makedirs(save_dir, exist_ok=True)
+
+
+    if name != "RC":
+        # 3. Entraînement
+        model.fit(X_train, y_train)
+
+    # 4. Évaluation 1-step
+    y_pred_1step, _ = model.predict(X_test)
+    metrics_1step = communs.compute_metrics(y_test, y_pred_1step)
+
+    # 5. Évaluation récursive 24h
+    y_pred_24h, time_24h = model.simulate_yearly_24h(X)
+    metrics_24h = communs.compute_metrics(X[:, 0], y_pred_24h)
+
+    # =========================================================================
+    # EXÉCUTION DU BENCHMARK (Spécifique au modèle Persistant)
+    # =========================================================================
+    if hasattr(model, "persistant"):
+        print(f" [Benchmark] Calcul du modèle de persistance pour {name}...")
+
+        # t_zone correspond à la première colonne de vos données d'entrée X (Tzone)
+        t_zone_data = X[:, 0]
+        # Appel de votre méthode de benchmark
+        y_true_bench, y_pred_bench = model.persistant(t_zone=t_zone_data, timestep_minutes=15, day_step=4)
+
+        # Calcul des métriques dédiées au benchmark de persistance
+        metrics_bench = communs.compute_metrics(y_true_bench, y_pred_bench)
+
+        # Sauvegarde Excel et prédictions du Benchmark
+        communs.save_run_to_excel(
+            filepath=f"{save_dir}/metrics_benchmark_persistance.xlsx",
+            model_name=f"persistant",
+            metrics=metrics_bench,
+            comment="Modèle persistant (J versus J+1) toutes les 15min"
+        )
+
+        communs.save_predictions(
+            filepath=f"{save_dir}/preds_benchmark_persistance.xlsx",
+            datetime_index=None,
+            t_true=y_true_bench,
+            t_pred=y_pred_bench
+        )
+        print(f" [Benchmark] Résultats archivés avec succès.")
+
+    # =========================================================================
+    # ARCHIVAGE SÉCURISÉ DANS LE MÊME DOSSIER (save_dir)
+    # =========================================================================
+    # Sauvegarde des métriques excel au même endroit
+    communs.save_run_to_excel(
+        filepath=f"{save_dir}/metrics_{name}_1step.xlsx",
+        model_name=f"{name}_1step",
+        metrics=metrics_1step,
+        comment="prédiction sur le pas suivant"
+    )
+
+    communs.save_predictions(
+        filepath=f"{save_dir}/preds_{name}_1step.xlsx",
+        datetime_index=None,
+        t_true=y_test,
+        t_pred=y_pred_1step
+    )
+
+    communs.save_run_to_excel(
+        filepath=f"{save_dir}/metrics_{name}_annuel_24h.xlsx",
+        model_name=f"{name}_24h",
+        metrics=metrics_24h,
+        comment="Déroulement récursif 24h sur 365 jours"
+    )
+
+    communs.save_predictions(
+        filepath=f"{save_dir}/preds_{name}_24h.xlsx",
+        datetime_index=df.index,
+        t_true=X[:, 0],
+        t_pred=y_pred_24h
+    )
+
+    # Sauvegarde des paramètres json du modèle (Ajout du 'f' devant la string pour le nom dynamique)
+    # Note : Assurez-vous que vos modèles RC, Linear et Quadratic possèdent bien cette méthode .save_parameters()
+    if hasattr(model, "save_parameters"):
+        model.save_parameters(f"{save_dir}/", filename=f"parametres_{name}.json")
+    else:
+        print(f" [Info] Le modèle {name} ne possède pas de méthode 'save_parameters', étape ignorée.")
+
+    print(f" Tout le contenu du run {name} a été archivé avec succès.")
+
+print("\n Toutes les simulations des modèles classiques sont terminées avec succès.")
+
+#%%
+
 for config in simulations_config:
     run_id = config["run_id"]
     n_iter = config["niterations"]
@@ -115,7 +218,7 @@ for config in simulations_config:
 
     # 6. Extraction de l'expression sélectionnée
     equ = model.get_sympy_expression()
-    print(f"✨ Équation Sélectionnée dénormalisée : {equ}")
+    print(f" Équation Sélectionnée dénormalisée : {equ}")
 
     # =========================================================================
     # ARCHIVAGE SÉCURISÉ DANS LE MÊME DOSSIER (save_dir)
@@ -164,8 +267,8 @@ print("\n Toutes les simulations automatisées sont terminées avec succès.")
 #%% optimisation
 selected_days, dict_days_prices, df_prix = communs.process_market_prices('dataset/prix_marché/GUI_ENERGY_PRICES_202412312300-202512312300.csv', seed = 42)
 data_12days, data_annual = communs.load_data_opti_new(
-    "opti/Eplus_run_20_24/model_annee_classique_20_24.csv", selected_days) #avant dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv
-#opti/EPlus_run_20_24/model_annee_classique_20_24.csv
+    "dataset/opti/Eplus_run_20_24/model_annee_classique_20_24.csv", selected_days) #avant dataset/ModeleHabitation/anneeClassique/model_annee_classique.csv
+#dataset/opti/EPlus_run_20_24/model_annee_classique_20_24.csv
 # --- PARAMÈTRES PHYSIQUES ---
 eta_h, eta_c = communs.calculate_average_efficiencies(data_annual) #c= 3.73 h = 1.86
 
@@ -225,7 +328,7 @@ for name, model in models.items():
         # Préparation Résumé
         summary_data.append({'Day': day, 'Total_Cost_Euro': total_cost})
 
-        print(f"✅ Terminé. Coût : {total_cost:.3f} €")
+        print(f" Terminé. Coût : {total_cost:.3f} €")
 
 
     # --- ANALYSE GLOBALE ---
@@ -269,7 +372,7 @@ for name, model in models.items():
             stats, df_cleaned = communs.analyze_variable_timestep_results(day, results_all_days, name,  csv_dir = f"api{version}/{name}_{runfile}")
             all_stats_list.append(stats)
             all_df_days_dict[day] = df_cleaned
-            stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days) #utilise fichier in opti/Eplus_run_20_24
+            stats_sans_opti, df_sans_opti = communs.analyze_variable_timestep_results_sans_opti(day, results_all_days) #utilise fichier in dataset/opti/Eplus_run_20_24
             all_stats_list_sans_opti.append(stats_sans_opti)
             all_df_days_dict_sans_opti[day] = df_sans_opti
             communs.plot_comparison_results_api(day, results_all_days[day], df_cleaned, df_sans_opti, output_dir= f"api{version}/{name}_{runfile}")

@@ -45,7 +45,7 @@ class RCModel(BaseModel):
     def get_parameters_dict(self):
         return {"R": self.R, "C": self.C, "a": self.a, "b": self.b, "c": self.c}
 
-    def benchmark(self, t_zone, timestep_minutes=15, day_step=4):
+    def persistant(self, t_zone, timestep_minutes=15, day_step=4):
 
         steps_per_hour = 60 // timestep_minutes
         steps_per_day = 24 * steps_per_hour  # 96 si 15 min
