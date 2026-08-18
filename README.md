@@ -165,7 +165,7 @@ Algorithm: Predictive Building HVAC Cost Optimization
 
 ### Points clés mis en valeur dans le README
 
-* **Agnosticisme du modèle `f(·)`** : L'algorithme montre clairement comment l'optimiseur s'interface avec n'importe quel modèle entraîné à l'étape précédente. Les variables Pyomo sont injectées dynamiquement dans l'expression symbolique générée (qu'il s'agisse des coefficients d'un réseau RC ou d'un arbre d'équations PySR).
+* **Agnosticisme du modèle `f(·)`** : L'algorithme montre clairement comment l'optimiseur s'interface avec n'importe quel modèle entraîné à l'étape précédente. Les variables Pyomo sont injectées dynamiquement dans l'expression symbolique générée (qu'il s'agisse des coefficients d'une régression linéaire ou d'un arbre d'équations PySR).
 * **Gestion du confort par relaxation (Slacks λ)** : Pour éviter que le solveur ne déclare le problème "infaisable" (Infeasible) lors de conditions météo extrêmes, les barrières thermiques de 20°C et 24°C sont dites "souples". Toute violation applique une lourde pénalité financière virtuelle (\(\gamma = 1000\)) dans la fonction objectif.
 * **Exclusivité logique des actionneurs** : La variable binaire \(z\) empêche mathématiquement le système de chauffer et refroidir simultanément.
 
