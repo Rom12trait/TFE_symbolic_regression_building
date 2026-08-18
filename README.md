@@ -5,7 +5,7 @@ Cette étude explore une approche de modélisation interprétable de la dynamiqu
 
 L’objectif spécifique de ce travail est de développer des modèles dynamiques légers, robustes et surtout interprétables, capables de prédire la température intérieure d’une maison résidentielle unifamiliale à deux étages, modélisée comme une seule zone thermique. Ces modèles utilisent comme variables d’entrée la température extérieure, la température intérieure instantanée et la puissance thermique HVAC, avec pour sortie la température intérieure prédite 15 minutes après. Ils sont ensuite intégrés dans une optimisation coûts liée aux signaux tarifaires du marché day-ahead (15 min) et validés ex-post avec l'outil EnergyPlus.
 
-L’étude s’appuie sur deux jeux de données distincts : une « Année Classique », caractérisée par des consignes stables, et une « Année Dynamique », favorisant une excitation riche des dynamiques thermiques. Plusieurs modèles benchmark ont été développés : modèle persistant, modèles physiques simplifiés 1R1C, régressions linéaires et quadratiques, ainsi que des modèles issus de la régression symbolique (PySR) linéaire et non linéaire.
+L’étude s’appuie sur deux jeux de données distincts : une « Année Classique », caractérisée par des consignes stables, et une « Année Dynamique », favorisant une excitation riche des dynamiques thermiques. Plusieurs modèles benchmarks ont été développés pour les comparer : modèle persistant, modèles physiques simplifiés 1R1C, régressions linéaires et quadratiques, ainsi que des modèles issus de la régression symbolique (PySR) linéaire et non linéaire.
 
 ## Résultats
 Les résultats montrent que la régression symbolique, particulièrement dans sa version non linéaire cubique entraînée sur l’année dynamique, parvient à concilier interprétabilité et précision, en assurant une meilleure stabilité temporelle lors de simulations récursives et en réduisant significativement l’erreur sur les puissances HVAC. En optimisation ex-post, le modèle linéaire issu de la RS année dynamique permet quant à lui d’obtenir les coûts énergétiques les plus bas sur les journées testées. Les résultats obtenus avec la régression symbolique surpassent les performances des modèles classiques développés dans cette étude, tels que la régression linéaire, la régression quadratique et le modèle persistant, en termes de stabilité temporelle, de précision sur la puissance HVAC et de qualité des trajectoires générées dans un contexte d’optimisation intégrée aux signaux tarifaires du marché.
@@ -21,8 +21,7 @@ L’étude met en lumière le potentiel prometteur de la régression symbolique,
 - `results/` : résultats linéaires pour l'année classique dans LinearV2_annee_classique ainsi que les résultats linéaires et non-linéaire de l'année dynamique dans LinearV2_annee_dyn.
 - `outputs/` : résultats de PySR durant mon exploration de celui-ci quand j'essayais d'obtenir une équation quadratique (les dossiers pysr_square), une équation logarithmique (dossier pysr_log). Equation quadratique avec delta T en sortie (au lieu de Tzone après 15min) (dossiers pysr_quad_delta) ou avec un gradiant sur Tout (Tzone-Tout) en entrée (dossiers pysr_quad_gradientTout). Le dossier pysr_quad_iter200_pop30 reprend l'équation cubique trouvée par PySR. Recherche d'équations exponentielles (dossiers pysr_exp) : le plus intéressant est pysr_exp_n150_p20 qui est ma meilleure équation exponentielle trouvée.
 
-
-Dans le main est repris tout le code pour l'identification et l'entrainement des modèles, l'optimisation des coûts et la validation ex-post par API EnergyPlus.
+Le main.py reprend tout le code pour le chargement et traitement des donées, l'identification et l'entrainement des modèles, l'optimisation des coûts et la validation ex-post par API EnergyPlus.
 
 
 ## Installation et pré-requis
@@ -40,3 +39,6 @@ Dans le main est repris tout le code pour l'identification et l'entrainement des
 ## Usage
 
 parler de comment utiliser surtout avec runfile, name...
+
+## Licence
+Ce projet est distribué sous la licence MIT.
