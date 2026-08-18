@@ -5,7 +5,7 @@ Cette étude explore une approche de modélisation interprétable de la dynamiqu
 
 L’objectif spécifique de ce travail est de développer des modèles dynamiques légers, robustes et surtout interprétables, capables de prédire la température intérieure d’une maison résidentielle unifamiliale à deux étages, modélisée comme une seule zone thermique. Ces modèles utilisent comme variables d’entrée la température extérieure, la température intérieure instantanée et la puissance thermique HVAC, avec pour sortie la température intérieure prédite 15 minutes après. Ils sont ensuite intégrés dans une optimisation coûts liée aux signaux tarifaires du marché day-ahead (15 min) et validés ex-post avec l'outil EnergyPlus.
 
-L’étude s’appuie sur deux jeux de données distincts : une « Année Classique », caractérisée par des consignes stables, et une « Année Dynamique », favorisant une excitation riche des dynamiques thermiques. Plusieurs modèles benchmarks ont été développés pour les comparer : modèle persistant, modèles physiques simplifiés 1R1C, régressions linéaires et quadratiques, ainsi que des modèles issus de la régression symbolique (PySR) linéaire et non linéaire.
+L’étude s’appuie sur deux jeux de données distincts : une « Année Classique », caractérisée par des consignes stables, et une « Année Dynamique », favorisant une excitation riche des dynamiques thermiques. Plusieurs modèles benchmarks ont été développés pour les comparer : modèle persistant, modèles physiques simplifiés 1R1C, régressions linéaires et quadratiques, ainsi que des modèles issus de la régression symbolique (implémentés avec l'outil PySR) linéaire et non linéaire.
 
 
 
