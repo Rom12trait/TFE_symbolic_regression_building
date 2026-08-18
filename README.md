@@ -170,7 +170,7 @@ Algorithm: Predictive Building HVAC Cost Optimization
 
 ## Résultats
 
-## 📊 Performances comparatives (Synthèse sur 12 jours)
+## Performances comparatives (Synthèse sur 12 jours)
 
 Le tableau ci-dessous présente la synthèse comparative des performances entre l'optimisation théorique et la validation Ex-Post. Les valeurs de coûts et d'énergies sont cumulées sur l'ensemble des 12 journées de test, tandis que les métriques d'erreur représentent des moyennes.
 
@@ -185,13 +185,13 @@ Le tableau ci-dessous présente la synthèse comparative des performances entre 
 | **Energie Opti (kWh)** | 99.1 | 197.0 | 130.2 | 89.2 | 190.7 | 109.4 | 165.9 |
 | **Energie Ex-post (kWh)** | 164.0 | 163.1 | 164.8 | 168.6 | 164.0 | 182.8 | 184.9 |
 
-> 💡 **Légende :** 
+>  **Légende :** 
 > * $RMSE_{Temp} = f(T_{zone, opti}, T_{zone,ex-post})$
 > * **MAPE** : Erreur absolue moyenne en pourcentage (*Mean Absolute Percentage Error*).
 > * **A.C.** : Année Classique \| **A.D.** : Année Dynamique.
 > * **RL** : Régression Linéaire \| **RS** : Régression Symbolique.
 > 
-> 🛠️ **Génération automatique :** L'extraction des données, l'agrégation sur les 12 jours et la mise en forme de ces lignes de résultats sont entièrement automatisées dans le projet via la fonction `communs.generate_tfe_summary_line()`.
+> 🛠 **Génération automatique :** L'extraction des données, l'agrégation sur les 12 jours et la mise en forme de ces lignes de résultats sont entièrement automatisées dans le projet via la fonction `communs.generate_tfe_summary_line()`.
 
 Les résultats montrent que la régression symbolique, particulièrement dans sa version non linéaire cubique entraînée sur l’année dynamique, parvient à concilier interprétabilité et précision, en assurant une meilleure stabilité temporelle lors de simulations récursives et en réduisant significativement l’erreur sur les puissances HVAC. En optimisation ex-post, le modèle linéaire issu de la RS année dynamique permet quant à lui d’obtenir les coûts énergétiques les plus bas sur les journées testées. Les résultats obtenus avec la régression symbolique surpassent les performances des modèles classiques développés dans cette étude, tels que la régression linéaire, la régression quadratique et le modèle persistant, en termes de stabilité temporelle, de précision sur la puissance HVAC et de qualité des trajectoires générées dans un contexte d’optimisation intégrée aux signaux tarifaires du marché.
 
