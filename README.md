@@ -28,7 +28,7 @@ L'architecture du dépôt est organisée de la manière suivante :
 │   ├── api_validator.py      # Couplage et exécution de l'API EnergyPlus
 │   ├── building_model.py     # Configuration de la structure de l'enveloppe
 │   ├── opti.py               # Contient la classe simulateur EnergyPlus
-│   └── communs.py            # Fonctions utilitaires (métriques, exports Excel, aggrégation,  conversion latex...)
+│   └── communs.py            # Fonctions utilitaires (métriques, exports Excel, aggrégation,  conversion latex, coupe 2D,...)
 ├── results/                  # Résultats d'entraînement des modèles classiques
 │   ├── LinearV2_annee_classique/
 │   └── LinearV2_annee_dyn/
